@@ -5,7 +5,7 @@ package gnss_test
 
 import (
 	"fmt"
-	"gnssgo"
+	"github.com/bramburn/gnssgo"
 	"math"
 	"os"
 	"testing"
@@ -238,3 +238,4 @@ func Test_ionexutest4(t *testing.T) {
 	fp.WriteString(fmt.Sprintf("];\n"))
 	fp.Close()
 }
+

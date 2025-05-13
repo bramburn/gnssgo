@@ -4,7 +4,7 @@
 package gnss_test
 
 import (
-	"gnssgo"
+	"github.com/bramburn/gnssgo"
 	"math"
 	"strings"
 	"testing"
@@ -338,3 +338,4 @@ func Test_utest11(t *testing.T) {
 	assert.True(math.Abs(doy2-366.0) < 1e-6)
 	assert.True(math.Abs(doy3-365.5) < 1e-6)
 }
+

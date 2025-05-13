@@ -56,12 +56,29 @@ If you have an idea for an enhancement:
 
 2. Build the project:
    ```bash
-   go build ./...
+   # Build the main library
+   cd src
+   go build .
+   cd ..
+
+   # Build an example application
+   cd app/convbin
+   go build .
+   cd ../..
    ```
 
 3. Run tests:
    ```bash
-   go test ./...
+   # Run tests for the main library
+   cd src
+   go test .
+   cd ..
+
+   # Run unit tests (requires uncommenting unittest in go.work)
+   # Edit go.work and uncomment the ./unittest line
+   cd unittest
+   go test .
+   cd ..
    ```
 
 ## Coding Standards

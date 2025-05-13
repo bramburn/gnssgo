@@ -5,7 +5,7 @@
 package gnss_test
 
 import (
-	"gnssgo"
+	"github.com/bramburn/gnssgo"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -69,3 +69,4 @@ func Test_geoidutest1(t *testing.T) {
 	assert.True(ret == 1)
 	gnssgo.CloseGeoid()
 }
+

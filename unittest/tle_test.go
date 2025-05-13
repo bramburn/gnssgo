@@ -5,7 +5,7 @@ package gnss_test
 
 import (
 	"fmt"
-	"gnssgo"
+	"github.com/bramburn/gnssgo"
 	"os"
 	"testing"
 
@@ -154,3 +154,4 @@ func Test_tleutest3(t *testing.T) {
 		fmt.Printf("\n")
 	}
 }
+

@@ -3553,7 +3553,7 @@ func (nav *Nav) UniqSEph() {
 * return : number of epochs
 *-----------------------------------------------------------------------------*/
 func (nav *Nav) UniqNav() {
-	Trace(4, "uniqnav: neph=%d ngeph=%d nseph=%d\n", nav.N, nav.Ng, nav.Ns)
+	Trace(4, "uniqnav: neph=%d ngeph=%d nseph=%d\n", nav.N(), nav.Ng(), nav.Ns())
 
 	/* unique ephemeris */
 	nav.UniqEph()

@@ -2027,7 +2027,7 @@ func cmppclk(q1, q2 *PClk) int {
 func (nav *Nav) CombinePrecClk() {
 	var i, j, k int
 
-	Trace(4, "combpclk: nc=%d\n", nav.Nc)
+	Trace(4, "combpclk: nc=%d\n", nav.Nc())
 
 	if nav.Nc() <= 0 {
 		return

@@ -24,12 +24,15 @@ jobs:
 
     - name: Build
       run: |
-        # Build the src module (main library)
+        # Enable unittest module in go.work
+        sed -i 's|// ./unittest|./unittest|g' go.work
+
+        # Build the main library
         cd src
         go build -v .
         cd ..
 
-        # Build the app modules
+        # Build the app/convbin module
         cd app/convbin
         go build -v .
         cd ../..
@@ -45,7 +48,12 @@ jobs:
 
     - name: Test
       run: |
-        # Test the src module (main library)
+        # Test the main library
         cd src
+        go test -v .
+        cd ..
+
+        # Run unit tests
+        cd unittest
         go test -v .
         cd ..

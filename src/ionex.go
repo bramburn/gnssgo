@@ -275,7 +275,7 @@ func (nav *Nav) CombineTec() {
 		i, j, n int
 	)
 
-	Trace(4, "combtec : nav.nt=%d\n", nav.Nt)
+	Trace(4, "combtec : nav.nt=%d\n", nav.Nt())
 
 	for i = 0; i < nav.Nt()-1; i++ {
 		for j = i + 1; j < nav.Nt(); j++ {

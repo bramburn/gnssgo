@@ -193,7 +193,8 @@ func decode_bnx_00(raw *Raw, buff []uint8, length int) int {
 		if fid <= 0x0c || (fid >= 0x0f && fid <= 0x1c) || (fid >= 0x20 && fid <= 0x22) ||
 			fid == 0x7f {
 			idx += getbnxi(buff[idx:], &flen) /* field length*/
-			str = fmt.Sprintf("%.*s", math.Min(float64(flen), float64(MAXANT-1)), buff[idx:])
+			maxLen := int(math.Min(float64(flen), float64(MAXANT-1)))
+			str = string(buff[idx : idx+maxLen])
 			idx += int(flen)
 			if raw.OutType > 0 {
 				copy(raw.MsgType[len(string(raw.MsgType[:])):], []byte(fmt.Sprintf(" [%02x]%s", fid, str)))

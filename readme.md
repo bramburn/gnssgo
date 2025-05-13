@@ -56,12 +56,33 @@ import "github.com/bramburn/gnssgo"
 git clone https://github.com/bramburn/gnssgo.git
 cd gnssgo
 
-# Build the project
-go build ./...
+# Build the main library
+cd src
+go build .
+cd ..
 
-# Run tests
-go test ./...
+# Build an example application
+cd app/convbin
+go build .
+cd ../..
+
+# Run tests for the main library
+cd src
+go test .
+cd ..
 ```
+
+### Project Structure
+
+This project uses Go workspaces (go.work) to manage multiple modules:
+
+- `src/` - The main library module (import as `github.com/bramburn/gnssgo`)
+- `app/` - Applications that use the library
+  - `app/convbin` - RINEX converter application
+  - Other applications (uncomment in go.work to use)
+- `unittest/` - Unit tests for the library (uncomment in go.work to run)
+- `examples/` - Example code showing how to use the library
+- `test_import/` and `test_import2/` - Examples of importing the library
 
 ## Usage
 

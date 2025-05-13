@@ -5,7 +5,7 @@ package gnss_test
 
 import (
 	"fmt"
-	"gnssgo"
+	"github.com/bramburn/gnssgo"
 	"os"
 	"testing"
 
@@ -212,3 +212,4 @@ func Test_precephutest5(t *testing.T) {
 	}
 	fp.Close()
 }
+

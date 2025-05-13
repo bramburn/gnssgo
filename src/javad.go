@@ -1216,7 +1216,7 @@ func decode_L2nav(buff []uint8, len, sat int, raw *Raw) int {
 	i += 1
 
 	if preamb != PREAMB_CNAV {
-		Trace(2, "javad *d sat=%2d L2 CNAV preamble error preamb=%02X\n", preamb)
+		Trace(2, "javad *d L2 CNAV preamble error preamb=%d\n", preamb)
 		return -1
 	}
 	Trace(3, "L2CNAV: sat=%2d prn=%2d msgid=%2d tow=%6d alert=%d\n", sat, prn,
@@ -1251,7 +1251,7 @@ func decode_L5nav(buff []uint8, len, sat int, raw *Raw) int {
 	i += 1
 
 	if preamb != PREAMB_CNAV {
-		Trace(2, "javad *d sat=%2d L5 CNAV preamble error preamb=%02X\n", preamb)
+		Trace(2, "javad *d L5 CNAV preamble error preamb=%d\n", preamb)
 		return -1
 	}
 	Trace(3, "L5CNAV: sat=%2d prn=%2d msgid=%2d tow=%6d alert=%d\n", sat, prn,

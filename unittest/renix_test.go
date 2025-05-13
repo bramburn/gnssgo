@@ -5,7 +5,7 @@ package gnss_test
 
 import (
 	"fmt"
-	"gnssgo"
+	"github.com/bramburn/gnssgo"
 	"os"
 	"testing"
 
@@ -245,3 +245,4 @@ func Test_renixutest7(t *testing.T) {
 		opt2.OutRnxHnavBody(fp, &nav.Seph[i])
 	}
 }
+

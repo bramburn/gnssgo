@@ -391,7 +391,7 @@ func decode_xe5bit(raw *Raw) int {
 	uiDataBlocks = U1(raw.Buff[idx:])
 
 	if uiDataBlocks >= 16 {
-		Trace(2, "nvs xf5bit message error: data blocks %u\n", uiDataBlocks)
+		Trace(2, "nvs xf5bit message error: data blocks %d\n", uiDataBlocks)
 		return -1
 	}
 	iBlkStartIdx = 1

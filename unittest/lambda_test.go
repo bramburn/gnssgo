@@ -4,7 +4,7 @@
 package gnss_test
 
 import (
-	"gnssgo"
+	"github.com/bramburn/gnssgo"
 	"math"
 	"testing"
 
@@ -107,3 +107,4 @@ func Test_lambdautest2(t *testing.T) {
 		assert.True(math.Abs(s[j]-s2[j]) < 1e-4)
 	}
 }
+

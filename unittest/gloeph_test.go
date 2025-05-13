@@ -5,7 +5,7 @@ package gnss_test
 
 import (
 	"fmt"
-	"gnssgo"
+	"github.com/bramburn/gnssgo"
 	"os"
 	"testing"
 
@@ -214,3 +214,4 @@ func Test_gloephutest6(t *testing.T) {
 	fp.Close()
 	fmt.Printf("output to: %s\n", outfile)
 }
+

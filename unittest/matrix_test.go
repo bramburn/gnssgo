@@ -5,7 +5,7 @@ package gnss_test
 
 import (
 	"fmt"
-	"gnssgo"
+	"github.com/bramburn/gnssgo"
 	"math"
 	"testing"
 
@@ -259,3 +259,4 @@ func Test_matrixutest6(t *testing.T) {
 	}
 
 }
+

@@ -5,7 +5,7 @@ package gnss_test
 
 import (
 	"fmt"
-	"gnssgo"
+	"github.com/bramburn/gnssgo"
 	"strings"
 	"testing"
 
@@ -233,3 +233,4 @@ func Test_miscutest4(t *testing.T) {
 	assert.True(vsi == -67890)
 
 }
+

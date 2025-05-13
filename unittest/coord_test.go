@@ -4,7 +4,7 @@
 package gnss_test
 
 import (
-	"gnssgo"
+	"github.com/bramburn/gnssgo"
 	"math"
 	"testing"
 
@@ -97,3 +97,4 @@ func Test_coordutest3(t *testing.T) {
 		math.Abs(r[1]-r4[1]) < 1e-6 &&
 		math.Abs(r[2]-r4[2]) < 1e-6)
 }
+

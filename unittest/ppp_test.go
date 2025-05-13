@@ -5,7 +5,7 @@ package gnss_test
 
 import (
 	"fmt"
-	"gnssgo"
+	"github.com/bramburn/gnssgo"
 	"math"
 	"testing"
 
@@ -80,3 +80,4 @@ func Test_ppputest3(t *testing.T) {
 		assert.True(math.Abs(dr[i]-dp[i]) < 0.001)
 	}
 }
+
