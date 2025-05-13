@@ -53,8 +53,9 @@ import (
 	"os"
 	"strings"
 
-	"gnssgo"
 	"strconv"
+
+	"github.com/bramburn/gnssgo"
 )
 
 const (

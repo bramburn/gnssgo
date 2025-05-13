@@ -87,16 +87,13 @@ import (
 	"math"
 	"net"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 	"unicode"
 
-	//"goserialgo"
-	serial "github.com/tarm/goserial"
-	//	serial "github.com/tarm/goserial"go
+	"go.bug.st/serial"
 )
 
 /* constants -----------------------------------------------------------------*/
@@ -181,11 +178,13 @@ type TcpClient struct { /* tcp cilent type */
 }
 
 type SerialComm struct { /* serial control type */
-	dev      Dev /* serial device */
-	serialio io.ReadWriteCloser
-	err      int /* error state */
-	//	lock     sync.Mutex /* lock flag */
-	tcpsvr *TcpSvr /* tcp server for received stream */
+	dev      Dev           /* serial device */
+	serialio serial.Port   /* serial port interface */
+	err      int           /* error state */
+	lock     sync.Mutex    /* lock flag for thread safety */
+	tcpsvr   *TcpSvr       /* tcp server for received stream */
+	mode     *serial.Mode  /* serial port mode */
+	timeout  time.Duration /* read timeout */
 }
 
 type NTrip struct { /* ntrip control type */
@@ -267,17 +266,40 @@ var (
 
 /* read/write serial buffer --------------------------------------------------*/
 
+/* list available serial ports ------------------------------------------------*/
+func ListSerialPorts() ([]string, error) {
+	ports, err := enumerator.GetDetailedPortsList()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []string
+	for _, port := range ports {
+		// Format: port name [description] (VID:PID if USB)
+		portInfo := port.Name
+		if port.IsUSB {
+			portInfo += fmt.Sprintf(" [%s] (VID:%s PID:%s)",
+				port.Product, port.VID, port.PID)
+		} else if len(port.Product) > 0 {
+			portInfo += fmt.Sprintf(" [%s]", port.Product)
+		}
+		result = append(result, portInfo)
+	}
+
+	return result, nil
+}
+
 /* open serial ---------------------------------------------------------------*/
 func OpenSerial(path string, mode int, msg *string) *SerialComm {
 	var (
-		br []int = []int{
-			300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800,
-			921600}
 		seri                             *SerialComm = new(SerialComm)
 		i, brate, bsize, stopb, tcp_port int         = 0, 9600, 8, 1, 0
 		parity                           rune        = 'N'
 		port, fctr, path_tcp, msg_tcp    string
+		flowControl                      bool = false
 	)
+
+	// Parse path format: port[:brate[:bsize[:parity[:stopb[:fctr[#port]]]]]]
 	index := strings.Index(path, ":")
 	if index > 0 {
 		port = path[:index]
@@ -286,35 +308,94 @@ func OpenSerial(path string, mode int, msg *string) *SerialComm {
 		port = path
 	}
 
+	// Check for TCP port for output stream
 	index = strings.Index(path, "#")
 	if index >= 0 {
 		fmt.Sscanf(path[index:], "#%d", &tcp_port)
 	}
-	i = sort.SearchInts(br, brate)
 
-	if i >= 14 {
+	// Validate baud rate
+	validBaudRates := []int{300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600}
+	validBaud := false
+	for _, rate := range validBaudRates {
+		if rate == brate {
+			validBaud = true
+			break
+		}
+	}
+
+	if !validBaud {
 		*msg = fmt.Sprintf("bitrate error (%d)", brate)
 		Tracet(1, "openserial: %s path=%s\n", *msg, path)
 		return nil
 	}
-	parity = unicode.ToUpper(parity)
 
-	c := &serial.Config{Name: port, Baud: brate}
-	s, err := serial.OpenPort(c)
-	seri.serialio = s
-	if err != nil {
-		seri.err = 1
-	} else {
-		seri.err = 0
+	// Convert parity character to serial.Parity type
+	parity = unicode.ToUpper(parity)
+	var serialParity serial.Parity
+	switch parity {
+	case 'N':
+		serialParity = serial.NoParity
+	case 'O':
+		serialParity = serial.OddParity
+	case 'E':
+		serialParity = serial.EvenParity
+	default:
+		serialParity = serial.NoParity
 	}
+
+	// Convert stop bits to serial.StopBits type
+	var serialStopBits serial.StopBits
+	switch stopb {
+	case 1:
+		serialStopBits = serial.OneStopBit
+	case 2:
+		serialStopBits = serial.TwoStopBits
+	default:
+		serialStopBits = serial.OneStopBit
+	}
+
+	// Check for flow control
+	if strings.ToLower(fctr) == "rts" {
+		flowControl = true
+	}
+
+	// Configure serial port mode
+	mode := &serial.Mode{
+		BaudRate: brate,
+		DataBits: bsize,
+		Parity:   serialParity,
+		StopBits: serialStopBits,
+	}
+
+	// Store mode in SerialComm struct
+	seri.mode = mode
+	seri.timeout = 100 * time.Millisecond // Default timeout
+
+	// Open the serial port
+	s, err := serial.Open(port, mode)
+	if err != nil {
+		*msg = fmt.Sprintf("serial port open error: %s", err.Error())
+		Tracet(1, "openserial: %s path=%s\n", *msg, path)
+		seri.err = 1
+		return nil
+	}
+
+	// Set read timeout
+	s.SetReadTimeout(seri.timeout)
+
+	seri.serialio = s
+	seri.err = 0
 	seri.tcpsvr = nil
 
-	/* open tcp sever to output received stream */
+	// Open TCP server to output received stream if requested
 	if tcp_port > 0 {
 		path_tcp = fmt.Sprintf(":%d", tcp_port)
 		seri.tcpsvr = OpenTcpSvr(path_tcp, &msg_tcp)
 	}
-	Tracet(3, "openserial: dev=%d\n", seri.dev)
+
+	Tracet(3, "openserial: port=%s baud=%d data=%d parity=%c stop=%d flow=%v\n",
+		port, brate, bsize, parity, stopb, flowControl)
 	return seri
 }
 
@@ -332,49 +413,72 @@ func (seri *SerialComm) CloseSerial() {
 /* read serial ---------------------------------------------------------------*/
 func (seri *SerialComm) ReadSerial(buff []byte, n int, msg *string) int {
 	var msg_tcp string
-	Tracet(4, "readserial: dev= n=%d\n", n)
+
+	Tracet(4, "readserial: n=%d\n", n)
+
 	if seri == nil || seri.serialio == nil {
 		return 0
 	}
-	nr, err := seri.serialio.Read(buff)
+
+	// Use mutex to ensure thread safety
+	seri.lock.Lock()
+	defer seri.lock.Unlock()
+
+	// Read data from serial port
+	nr, err := seri.serialio.Read(buff[:n])
 	if err != nil {
+		*msg = fmt.Sprintf("serial read error: %s", err.Error())
 		seri.err = 1
+		Tracet(2, "readserial: error: %s\n", err.Error())
+		return 0
 	} else {
 		seri.err = 0
 	}
-	Tracet(5, "readserial: exit dev=%d nr=%d\n", seri.dev, nr)
 
-	/* write received stream to tcp server port */
+	Tracet(5, "readserial: exit nr=%d\n", nr)
+
+	// Write received stream to tcp server port if configured
 	if seri.tcpsvr != nil && nr > 0 {
-		seri.tcpsvr.WriteTcpSvr(buff, nr, &msg_tcp)
+		seri.tcpsvr.WriteTcpSvr(buff[:nr], nr, &msg_tcp)
 	}
+
 	return nr
 }
 
 /* write serial --------------------------------------------------------------*/
 func (seri *SerialComm) WriteSerial(buff []uint8, n int, msg *string) int {
+	Tracet(3, "writeserial: n=%d\n", n)
 
-	Tracet(3, "writeserial: dev=,n=%d\n", n)
-
-	if seri == nil {
+	if seri == nil || seri.serialio == nil {
 		return 0
 	}
+
 	if n <= 0 {
 		return 0
 	}
-	ns, err := seri.serialio.Write(buff)
+
+	// Use mutex to ensure thread safety
+	seri.lock.Lock()
+	defer seri.lock.Unlock()
+
+	// Write data to serial port
+	ns, err := seri.serialio.Write(buff[:n])
 	if err != nil {
+		*msg = fmt.Sprintf("serial write error: %s", err.Error())
 		seri.err = 1
+		Tracet(2, "writeserial: error: %s\n", err.Error())
+		return 0
 	} else {
 		seri.err = 0
 	}
-	Tracet(5, "writeserial: exit dev=%d ns=%d\n", seri.dev, ns)
+
+	Tracet(5, "writeserial: exit ns=%d\n", ns)
 	return ns
 }
 
 /* get state serial ----------------------------------------------------------*/
 func (seri *SerialComm) StateSerial() int {
-	if seri == nil {
+	if seri == nil || seri.serialio == nil {
 		return 0
 	} else if seri.err != 0 {
 		return -1
@@ -384,7 +488,6 @@ func (seri *SerialComm) StateSerial() int {
 
 /* get extended state serial -------------------------------------------------*/
 func (seri *SerialComm) StatExSerial(msg *string) int {
-	//    char *p=msg;
 	state := seri.StateSerial()
 
 	*msg += "serial:\n"
@@ -392,8 +495,21 @@ func (seri *SerialComm) StatExSerial(msg *string) int {
 	if state == 0 {
 		return 0
 	}
+
+	// Get port details if available
+	portDetails := "unknown"
+	if seri.mode != nil {
+		portDetails = fmt.Sprintf("%d,%d,%s,%s",
+			seri.mode.BaudRate,
+			seri.mode.DataBits,
+			seri.mode.Parity.String(),
+			seri.mode.StopBits.String())
+	}
+
 	*msg += fmt.Sprintf("  dev     = %d\n", seri.dev)
 	*msg += fmt.Sprintf("  error   = %d\n", seri.err)
+	*msg += fmt.Sprintf("  config  = %s\n", portDetails)
+	*msg += fmt.Sprintf("  timeout = %v\n", seri.timeout)
 	return state
 }
 
@@ -3466,18 +3582,22 @@ func set_brate(str *Stream, brate int) int {
 		return 0
 	}
 
+	// For go.bug.st/serial, we need to close and reopen the port with new settings
 	path = str.Path
 
+	// Update the path with the new baud rate
 	idx := strings.Index(path, ":")
 	if idx < 0 {
 		path += fmt.Sprintf(":%d", brate)
 	} else {
 		idx2 := strings.Index(path[idx+1:], ":")
 		if idx2 >= 0 {
-			buff = path[idx2:]
+			buff = path[idx+idx2+1:]
 		}
 		path = fmt.Sprintf("%s:%d%s", path[:idx], brate, buff)
 	}
+
+	// Close the current stream and reopen with new settings
 	str.StreamClose()
 	return str.OpenStream(ctype, mode, path)
 }

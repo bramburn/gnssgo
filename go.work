@@ -2,11 +2,14 @@ go 1.18
 
 use (
 	./src
-	// ./app/rnx2rtkp
-	// ./unittest
-	//	./app/rtkrcv
-	// ./app/str2str
 	./app/convbin
-// ./app/plot
-// ./app/pos2kml
+	./examples/basic_positioning
+	./examples/rtk_positioning
+	// Uncomment the following lines to work with other applications
+	// ./app/rnx2rtkp
+	// ./app/rtkrcv
+	// ./app/str2str
+	// ./app/plot
+	// ./app/pos2kml
+	// ./unittest
 )
