@@ -94,6 +94,7 @@ import (
 	"unicode"
 
 	"go.bug.st/serial"
+	"go.bug.st/serial/enumerator"
 )
 
 /* constants -----------------------------------------------------------------*/
@@ -290,13 +291,13 @@ func ListSerialPorts() ([]string, error) {
 }
 
 /* open serial ---------------------------------------------------------------*/
-func OpenSerial(path string, mode int, msg *string) *SerialComm {
+func OpenSerial(path string, modeFlag int, msg *string) *SerialComm {
 	var (
-		seri                             *SerialComm = new(SerialComm)
-		i, brate, bsize, stopb, tcp_port int         = 0, 9600, 8, 1, 0
-		parity                           rune        = 'N'
-		port, fctr, path_tcp, msg_tcp    string
-		flowControl                      bool = false
+		seri                          *SerialComm = new(SerialComm)
+		brate, bsize, stopb, tcp_port int         = 9600, 8, 1, 0
+		parity                        rune        = 'N'
+		port, fctr, path_tcp, msg_tcp string
+		flowControl                   bool = false
 	)
 
 	// Parse path format: port[:brate[:bsize[:parity[:stopb[:fctr[#port]]]]]]
@@ -361,7 +362,7 @@ func OpenSerial(path string, mode int, msg *string) *SerialComm {
 	}
 
 	// Configure serial port mode
-	mode := &serial.Mode{
+	serialMode := &serial.Mode{
 		BaudRate: brate,
 		DataBits: bsize,
 		Parity:   serialParity,
@@ -369,11 +370,11 @@ func OpenSerial(path string, mode int, msg *string) *SerialComm {
 	}
 
 	// Store mode in SerialComm struct
-	seri.mode = mode
+	seri.mode = serialMode
 	seri.timeout = 100 * time.Millisecond // Default timeout
 
 	// Open the serial port
-	s, err := serial.Open(port, mode)
+	s, err := serial.Open(port, serialMode)
 	if err != nil {
 		*msg = fmt.Sprintf("serial port open error: %s", err.Error())
 		Tracet(1, "openserial: %s path=%s\n", *msg, path)
@@ -499,11 +500,30 @@ func (seri *SerialComm) StatExSerial(msg *string) int {
 	// Get port details if available
 	portDetails := "unknown"
 	if seri.mode != nil {
+		// Convert parity and stop bits to string
+		parityStr := "N"
+		switch seri.mode.Parity {
+		case serial.NoParity:
+			parityStr = "N"
+		case serial.OddParity:
+			parityStr = "O"
+		case serial.EvenParity:
+			parityStr = "E"
+		}
+
+		stopBitsStr := "1"
+		switch seri.mode.StopBits {
+		case serial.OneStopBit:
+			stopBitsStr = "1"
+		case serial.TwoStopBits:
+			stopBitsStr = "2"
+		}
+
 		portDetails = fmt.Sprintf("%d,%d,%s,%s",
 			seri.mode.BaudRate,
 			seri.mode.DataBits,
-			seri.mode.Parity.String(),
-			seri.mode.StopBits.String())
+			parityStr,
+			stopBitsStr)
 	}
 
 	*msg += fmt.Sprintf("  dev     = %d\n", seri.dev)
