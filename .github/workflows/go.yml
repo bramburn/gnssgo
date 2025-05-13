@@ -24,22 +24,28 @@ jobs:
 
     - name: Build
       run: |
-        # Build the main module
-        go build -v .
-        # Build the src module
+        # Build the src module (main library)
         cd src
         go build -v .
         cd ..
+
         # Build the app modules
         cd app/convbin
         go build -v .
         cd ../..
 
+        # Build test imports
+        cd test_import
+        go build -v .
+        cd ..
+
+        cd test_import2
+        go build -v .
+        cd ..
+
     - name: Test
       run: |
-        # Test the main module
-        go test -v .
-        # Test the src module
+        # Test the src module (main library)
         cd src
         go test -v .
         cd ..
