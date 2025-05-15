@@ -4,6 +4,7 @@ use (
 	./app/convbin
 	./src
 	./unittest
+	./pkg/igs
 // Uncomment the following lines to work with other applications
 // ./app/rnx2rtkp
 // ./app/rtkrcv

@@ -30,3 +30,10 @@ Thumbs.db
 # Caches and logs
 .cache/
 log_*
+
+# IGS downloads
+*/*/data/
+*.sp3
+*.sp3.Z
+*.clk
+*.clk.Z
