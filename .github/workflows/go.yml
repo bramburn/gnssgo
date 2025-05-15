@@ -42,9 +42,6 @@ jobs:
         go build -v .
         cd ..
 
-        cd test_import2
-        go build -v .
-        cd ..
 
     - name: Test
       run: |
