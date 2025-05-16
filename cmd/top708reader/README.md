@@ -1,6 +1,6 @@
 # TOP708 Reader CLI
 
-A command-line tool for reading data from TOPGNSS TOP708 GNSS receivers.
+A command-line tool for reading data from TOPGNSS TOP708 GNSS receivers with RTK correction support.
 
 ## Overview
 
@@ -10,6 +10,7 @@ This tool allows you to connect to a TOPGNSS TOP708 GNSS receiver through a seri
 - NMEA sentence parsing and display
 - RTCM message monitoring
 - UBX protocol message monitoring
+- RTK correction using NTRIP
 
 ## Installation
 
@@ -22,6 +23,8 @@ go build
 This will create a `top708reader.exe` executable in the current directory.
 
 ## Usage
+
+### Basic Usage
 
 ```bash
 # List available serial ports
@@ -43,15 +46,34 @@ top708reader -port COM3 -mode ubx
 top708reader -port COM3 -baud 115200 -mode nmea
 ```
 
+### RTK Correction
+
+The tool supports RTK correction using NTRIP. To use RTK correction, you need to provide NTRIP server details:
+
+```bash
+# Enable RTK correction
+top708reader -port COM3 -mode rtk -ntrip-server example.com -ntrip-port 2101 -ntrip-user username -ntrip-password password -ntrip-mount MOUNTPOINT
+
+# Show RTK status updates
+top708reader -port COM3 -mode rtk -ntrip-server example.com -ntrip-mount MOUNTPOINT -show-rtk-status
+```
+
 ## Command-Line Options
 
-| Option    | Description                                   | Default   |
-|-----------|-----------------------------------------------|-----------|
-| `-port`   | Serial port name (e.g., COM1, /dev/ttyUSB0)   | (prompt)  |
-| `-baud`   | Baud rate                                     | 38400     |
-| `-timeout`| Connection verification timeout               | 5s        |
-| `-mode`   | Data mode: raw, nmea, rtcm, ubx               | raw       |
-| `-list`   | List available ports and exit                 | false     |
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-port` | Serial port name (e.g., COM1, /dev/ttyUSB0) | (prompt) |
+| `-baud` | Baud rate | 38400 |
+| `-timeout` | Connection verification timeout | 5s |
+| `-mode` | Data mode: raw, nmea, rtcm, ubx, rtk | raw |
+| `-list` | List available ports and exit | false |
+| `-rtk` | Enable RTK correction | false |
+| `-ntrip-server` | NTRIP server address | (none) |
+| `-ntrip-port` | NTRIP server port | 2101 |
+| `-ntrip-user` | NTRIP username | (none) |
+| `-ntrip-password` | NTRIP password | (none) |
+| `-ntrip-mount` | NTRIP mountpoint | (none) |
+| `-show-rtk-status` | Show RTK status updates | false |
 
 ## Data Modes
 
@@ -91,6 +113,31 @@ UBX Message - Class: 0x01, ID: 0x07, Length: 92 bytes
   Payload: 10 32 00 00 00 00 00 00 ...
 ```
 
+### RTK Mode
+
+Combines NMEA data from the GNSS receiver with RTCM correction data from an NTRIP server to achieve high-precision positioning. Displays position information along with RTK status.
+
+Example output:
+```
+[GGA] $GPGGA,123519,4807.038,N,01131.000,E,4,12,0.6,545.4,M,46.9,M,,*47
+  Position: 4807.038N, 01131.000E
+  Quality: 4 (RTK Fixed), Satellites: 12, HDOP: 0.6
+  Altitude: 545.4 M
+[RTK Status] RTK Fixed, Satellites: 12, HDOP: 0.6, Last Update: 15:35:19
+```
+
+## RTK Status Information
+
+When using RTK mode with `-show-rtk-status`, the tool will display the current RTK status:
+
+| Quality | Description |
+|---------|-------------|
+| 0 | No Fix |
+| 1 | GPS Fix (no RTK) |
+| 2 | Differential GPS Fix |
+| 4 | RTK Fixed (cm-level accuracy) |
+| 5 | RTK Float (dm-level accuracy) |
+
 ## Stopping the Tool
 
 Press Ctrl+C to stop monitoring and exit the tool.
@@ -114,3 +161,18 @@ Press Ctrl+C to stop monitoring and exit the tool.
 - Verify that the device is sending data in the expected format
 - Try a different data mode
 - Check the baud rate settings
+
+### NTRIP Connection Issues
+
+If you have trouble connecting to the NTRIP server:
+- Verify the server address, port, username, password, and mountpoint
+- Check your internet connection
+- Ensure the NTRIP server is online and the mountpoint exists
+
+### RTK Fix Not Achieved
+
+If you can't get an RTK fixed solution:
+- Ensure you have a clear view of the sky
+- Check that the NTRIP corrections are appropriate for your location
+- Verify that your GNSS receiver supports RTK
+- Make sure the base station is within the recommended distance (typically <30km)

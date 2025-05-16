@@ -8,19 +8,28 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/bramburn/gnssgo/hardware/topgnss/top708"
+	"github.com/bramburn/gnssgo/pkg/ntrip"
 )
 
 // CLI flags
 var (
-	portName  string
-	baudRate  int
-	timeout   time.Duration
-	mode      string
-	showPorts bool
+	portName        string
+	baudRate        int
+	timeout         time.Duration
+	mode            string
+	showPorts       bool
+	enableRTK       bool
+	ntripServer     string
+	ntripPort       string
+	ntripUser       string
+	ntripPassword   string
+	ntripMountpoint string
+	showRTKStatus   bool
 )
 
 // Supported modes
@@ -29,15 +38,56 @@ const (
 	ModeNMEA = "nmea"
 	ModeRTCM = "rtcm"
 	ModeUBX  = "ubx"
+	ModeRTK  = "rtk"
 )
+
+// RTK fix quality indicators
+const (
+	FixNone      = "0" // No fix
+	FixGPS       = "1" // GPS fix
+	FixDGPS      = "2" // Differential GPS fix
+	FixPPS       = "3" // PPS fix
+	FixRTKFixed  = "4" // Real Time Kinematic (fixed)
+	FixRTKFloat  = "5" // Real Time Kinematic (float)
+	FixEstimated = "6" // Estimated fix
+	FixManual    = "7" // Manual input mode
+	FixSimulated = "8" // Simulated mode
+)
+
+// RTKStatus represents the current RTK status
+type RTKStatus struct {
+	Quality     string
+	Description string
+	Satellites  string
+	HDOP        string
+	LastUpdate  time.Time
+	mutex       sync.Mutex
+}
+
+// Global RTK status
+var rtkStatus = RTKStatus{
+	Quality:     FixNone,
+	Description: "No Fix",
+	LastUpdate:  time.Now(),
+}
 
 func init() {
 	// Define command-line flags
 	flag.StringVar(&portName, "port", "", "Serial port name (e.g., COM1, /dev/ttyUSB0)")
 	flag.IntVar(&baudRate, "baud", 38400, "Baud rate (default: 38400)")
 	flag.DurationVar(&timeout, "timeout", 5*time.Second, "Connection verification timeout")
-	flag.StringVar(&mode, "mode", ModeRaw, "Data mode: raw, nmea, rtcm, ubx")
+	flag.StringVar(&mode, "mode", ModeRaw, "Data mode: raw, nmea, rtcm, ubx, rtk")
 	flag.BoolVar(&showPorts, "list", false, "List available ports and exit")
+
+	// RTK-related flags
+	flag.BoolVar(&enableRTK, "rtk", false, "Enable RTK correction")
+	flag.StringVar(&ntripServer, "ntrip-server", "", "NTRIP server address")
+	flag.StringVar(&ntripPort, "ntrip-port", "2101", "NTRIP server port")
+	flag.StringVar(&ntripUser, "ntrip-user", "", "NTRIP username")
+	flag.StringVar(&ntripPassword, "ntrip-password", "", "NTRIP password")
+	flag.StringVar(&ntripMountpoint, "ntrip-mount", "", "NTRIP mountpoint")
+	flag.BoolVar(&showRTKStatus, "show-rtk-status", false, "Show RTK status updates")
+
 	flag.Parse()
 }
 
@@ -97,20 +147,208 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
-	// Start monitoring based on selected mode
-	fmt.Printf("Starting %s data monitoring. Press Ctrl+C to stop.\n", mode)
-	switch strings.ToLower(mode) {
-	case ModeRaw:
-		monitorRawData(device, sigChan)
-	case ModeNMEA:
-		monitorNMEA(device, sigChan)
-	case ModeRTCM:
-		monitorRTCM(device, sigChan)
-	case ModeUBX:
-		monitorUBX(device, sigChan)
-	default:
-		log.Fatalf("Unsupported mode: %s", mode)
+	// Check if RTK mode is enabled
+	if strings.ToLower(mode) == ModeRTK || enableRTK {
+		// Validate NTRIP settings
+		if ntripServer == "" {
+			fmt.Println("NTRIP server address is required for RTK mode.")
+			fmt.Println("Please provide a server address with -ntrip-server flag.")
+			return
+		}
+
+		if ntripMountpoint == "" {
+			fmt.Println("NTRIP mountpoint is required for RTK mode.")
+			fmt.Println("Please provide a mountpoint with -ntrip-mount flag.")
+			return
+		}
+
+		// Start RTK monitoring
+		fmt.Printf("Starting RTK monitoring with NTRIP server %s:%s. Press Ctrl+C to stop.\n",
+			ntripServer, ntripPort)
+		monitorRTK(device, sigChan)
+	} else {
+		// Start regular monitoring based on selected mode
+		fmt.Printf("Starting %s data monitoring. Press Ctrl+C to stop.\n", mode)
+		switch strings.ToLower(mode) {
+		case ModeRaw:
+			monitorRawData(device, sigChan)
+		case ModeNMEA:
+			monitorNMEA(device, sigChan)
+		case ModeRTCM:
+			monitorRTCM(device, sigChan)
+		case ModeUBX:
+			monitorUBX(device, sigChan)
+		default:
+			log.Fatalf("Unsupported mode: %s", mode)
+		}
 	}
+}
+
+// getFixQualityDescription returns a human-readable description of the fix quality
+func getFixQualityDescription(quality string) string {
+	switch quality {
+	case FixNone:
+		return "No Fix"
+	case FixGPS:
+		return "GPS Fix"
+	case FixDGPS:
+		return "DGPS Fix"
+	case FixPPS:
+		return "PPS Fix"
+	case FixRTKFixed:
+		return "RTK Fixed"
+	case FixRTKFloat:
+		return "RTK Float"
+	case FixEstimated:
+		return "Estimated Fix"
+	case FixManual:
+		return "Manual Input"
+	case FixSimulated:
+		return "Simulated Mode"
+	default:
+		return "Unknown"
+	}
+}
+
+// updateRTKStatus updates the global RTK status
+func updateRTKStatus(quality, satellites, hdop string) {
+	rtkStatus.mutex.Lock()
+	defer rtkStatus.mutex.Unlock()
+
+	rtkStatus.Quality = quality
+	rtkStatus.Description = getFixQualityDescription(quality)
+	rtkStatus.Satellites = satellites
+	rtkStatus.HDOP = hdop
+	rtkStatus.LastUpdate = time.Now()
+
+	if showRTKStatus {
+		fmt.Printf("[RTK Status] %s, Satellites: %s, HDOP: %s\n",
+			rtkStatus.Description, rtkStatus.Satellites, rtkStatus.HDOP)
+	}
+}
+
+// RTKHandler implements the DataHandler interface for RTK data
+type RTKHandler struct {
+	ntripClient *ntrip.Client
+	processor   *ntrip.RTKProcessor
+}
+
+// HandleNMEA handles NMEA sentences in RTK mode
+func (h *RTKHandler) HandleNMEA(sentence top708.NMEASentence) {
+	if sentence.Valid {
+		fmt.Printf("[%s] %s\n", sentence.Type, sentence.Raw)
+
+		// For GGA sentences, display position information and update RTK status
+		if sentence.Type == "GGA" && len(sentence.Fields) >= 10 {
+			lat := sentence.Fields[1]
+			latDir := sentence.Fields[2]
+			lon := sentence.Fields[3]
+			lonDir := sentence.Fields[4]
+			quality := sentence.Fields[5]
+			satellites := sentence.Fields[6]
+			hdop := sentence.Fields[7]
+			altitude := sentence.Fields[8]
+			altUnit := sentence.Fields[9]
+
+			fmt.Printf("  Position: %s%s, %s%s\n", lat, latDir, lon, lonDir)
+			fmt.Printf("  Quality: %s (%s), Satellites: %s, HDOP: %s\n",
+				quality, getFixQualityDescription(quality), satellites, hdop)
+			fmt.Printf("  Altitude: %s %s\n", altitude, altUnit)
+
+			// Update RTK status
+			updateRTKStatus(quality, satellites, hdop)
+		}
+	}
+}
+
+// HandleRTCM handles RTCM messages in RTK mode
+func (h *RTKHandler) HandleRTCM(message top708.RTCMMessage) {
+	fmt.Printf("RTCM Message - ID: %d, Length: %d bytes\n", message.MessageID, message.Length)
+}
+
+// HandleUBX handles UBX messages in RTK mode
+func (h *RTKHandler) HandleUBX(message top708.UBXMessage) {
+	fmt.Printf("UBX Message - Class: 0x%02X, ID: 0x%02X, Length: %d bytes\n",
+		message.Class, message.ID, len(message.Payload))
+}
+
+// monitorRTK monitors GNSS data with RTK correction
+func monitorRTK(device *top708.TOP708Device, sigChan chan os.Signal) {
+	// Create NTRIP client
+	ntripClient, err := ntrip.NewClient(ntripServer, ntripPort, ntripUser, ntripPassword, ntripMountpoint)
+	if err != nil {
+		log.Fatalf("Failed to create NTRIP client: %v", err)
+	}
+
+	// Connect to NTRIP server
+	fmt.Printf("Connecting to NTRIP server %s:%s...\n", ntripServer, ntripPort)
+	err = ntripClient.Connect()
+	if err != nil {
+		log.Fatalf("Failed to connect to NTRIP server: %v", err)
+	}
+	defer ntripClient.Disconnect()
+	fmt.Println("Connected to NTRIP server successfully.")
+
+	// Create GNSS receiver
+	gnssReceiver, err := ntrip.NewGNSSReceiver(portName)
+	if err != nil {
+		log.Fatalf("Failed to create GNSS receiver: %v", err)
+	}
+	defer gnssReceiver.Close()
+
+	// Create RTK processor
+	fmt.Println("Starting RTK processor...")
+	processor, err := ntrip.NewRTKProcessor(gnssReceiver, ntripClient)
+	if err != nil {
+		log.Fatalf("Failed to create RTK processor: %v", err)
+	}
+
+	// Start RTK processing
+	err = processor.Start()
+	if err != nil {
+		log.Fatalf("Failed to start RTK processing: %v", err)
+	}
+	defer processor.Stop()
+	fmt.Println("RTK processor started successfully.")
+
+	// Create RTK handler
+	handler := &RTKHandler{
+		ntripClient: ntripClient,
+		processor:   processor,
+	}
+
+	// Start NMEA monitoring to get position updates
+	config := top708.DefaultMonitorConfig(top708.ProtocolNMEA, handler)
+	err = device.MonitorNMEA(config)
+	if err != nil {
+		log.Fatalf("Failed to start NMEA monitoring: %v", err)
+	}
+	defer device.StopMonitoring()
+
+	// Start a goroutine to display RTK status periodically
+	if showRTKStatus {
+		go func() {
+			ticker := time.NewTicker(5 * time.Second)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-ticker.C:
+					rtkStatus.mutex.Lock()
+					fmt.Printf("[RTK Status] %s, Satellites: %s, HDOP: %s, Last Update: %s\n",
+						rtkStatus.Description, rtkStatus.Satellites, rtkStatus.HDOP,
+						rtkStatus.LastUpdate.Format("15:04:05"))
+					rtkStatus.mutex.Unlock()
+				case <-sigChan:
+					return
+				}
+			}
+		}()
+	}
+
+	// Wait for signal
+	<-sigChan
+	fmt.Println("\nStopped RTK monitoring.")
 }
 
 // listAvailablePorts lists all available serial ports
@@ -223,7 +461,8 @@ func (h *NMEAHandler) HandleNMEA(sentence top708.NMEASentence) {
 			altUnit := sentence.Fields[9]
 
 			fmt.Printf("  Position: %s%s, %s%s\n", lat, latDir, lon, lonDir)
-			fmt.Printf("  Quality: %s, Satellites: %s, HDOP: %s\n", quality, satellites, hdop)
+			fmt.Printf("  Quality: %s (%s), Satellites: %s, HDOP: %s\n",
+				quality, getFixQualityDescription(quality), satellites, hdop)
 			fmt.Printf("  Altitude: %s %s\n", altitude, altUnit)
 		}
 	}
