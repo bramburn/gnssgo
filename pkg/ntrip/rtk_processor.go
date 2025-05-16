@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bramburn/gnssgo"
+	"github.com/bramburn/gnssgo/pkg/gnssgo"
 )
 
 // RTKStats contains statistics about the RTK processing

@@ -5,7 +5,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/bramburn/gnssgo"
+	"github.com/bramburn/gnssgo/pkg/gnssgo"
 )
 
 // Client represents an NTRIP client

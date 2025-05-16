@@ -5,7 +5,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/bramburn/gnssgo"
+	"github.com/bramburn/gnssgo/pkg/gnssgo"
 )
 
 // GNSSReceiver represents a physical GNSS receiver
