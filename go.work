@@ -1,10 +1,11 @@
-go 1.21
+go 1.23
 
 use (
 	./app/convbin
-	./src
+	./pkg/gnssgo
 	./unittest
 	./pkg/igs
+	./gui
 // Uncomment the following lines to work with other applications
 // ./app/rnx2rtkp
 // ./app/rtkrcv

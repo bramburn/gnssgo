@@ -4,7 +4,7 @@
 package gnss_test
 
 import (
-	"github.com/bramburn/gnssgo"
+	"github.com/bramburn/gnssgo/pkg/gnssgo"
 	"math"
 	"strings"
 	"testing"

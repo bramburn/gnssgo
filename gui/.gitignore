@@ -1,0 +1,9 @@
+# Wails build artifacts
+build/bin/
+frontend/dist/
+frontend/node_modules/
+node_modules/
+wailsjs/
+
+# Exclude download directories
+downloads/

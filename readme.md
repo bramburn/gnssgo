@@ -40,13 +40,13 @@ To use GNSSGO as a library in your Go project:
 
 ```bash
 # Add the library to your project
-go get github.com/bramburn/gnssgo
+go get github.com/bramburn/gnssgo/pkg/gnssgo
 ```
 
 Then import it in your code:
 
 ```go
-import "github.com/bramburn/gnssgo"
+import "github.com/bramburn/gnssgo/pkg/gnssgo"
 ```
 
 ### For Development
@@ -57,17 +57,22 @@ git clone https://github.com/bramburn/gnssgo.git
 cd gnssgo
 
 # Build the main library
-cd src
+cd pkg/gnssgo
 go build .
-cd ..
+cd ../..
 
 # Build an example application
 cd app/convbin
 go build .
 cd ../..
 
+# Build and run the GUI application
+cd gui
+wails dev
+cd ..
+
 # Run tests for the main library
-cd src
+cd unittest
 go test .
 cd ..
 ```
@@ -76,11 +81,13 @@ cd ..
 
 This project uses Go workspaces (go.work) to manage multiple modules:
 
-- `src/` - The main library module (import as `github.com/bramburn/gnssgo`)
+- `pkg/gnssgo/` - The main library module (import as `github.com/bramburn/gnssgo/pkg/gnssgo`)
+- `pkg/igs/` - IGS product downloader module
 - `app/` - Applications that use the library
   - `app/convbin` - RINEX converter application
   - Other applications (uncomment in go.work to use)
-- `unittest/` - Unit tests for the library (uncomment in go.work to run)
+- `gui/` - Wails GUI application
+- `unittest/` - Unit tests for the library
 - `examples/` - Example code showing how to use the library
 - `test_import/` and `test_import2/` - Examples of importing the library
 
@@ -95,6 +102,26 @@ Check out the [examples](examples/) directory for comprehensive examples of how 
 In file 'go.work', you can choose your app by uncommenting the app path.
 
 For configuring an app, you can define command line arguments in file 'launch.json' under the .vscode directory.
+
+### Using the GUI Application
+
+The project includes a GUI application built with Wails, which provides a user-friendly interface for interacting with the GNSSGO library.
+
+To run the GUI application in development mode:
+
+```bash
+cd gui
+wails dev
+```
+
+To build the GUI application for production:
+
+```bash
+cd gui
+wails build
+```
+
+The built application will be available in the `gui/build/bin` directory.
 
 ### Key Components
 
