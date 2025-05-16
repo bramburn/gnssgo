@@ -6,6 +6,7 @@ package gnss_test
 import (
 	"github.com/bramburn/gnssgo/pkg/gnssgo"
 	"testing"
+	"fmt"
 )
 
 // This function is no longer used
