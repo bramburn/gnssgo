@@ -6,6 +6,11 @@ use (
 	./gui
 	./pkg/gnssgo
 	./pkg/igs
+	./pkg/caster
+	./pkg/server
+	./pkg/integration
+	./examples/ntrip/client
+	./examples/ntrip/server
 	./unittest
 // Uncomment the following lines to work with other applications
 // ./app/rnx2rtkp

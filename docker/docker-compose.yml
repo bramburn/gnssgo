@@ -1,0 +1,29 @@
+version: '3'
+
+services:
+  caster:
+    build:
+      context: ..
+      dockerfile: docker/caster/Dockerfile
+    ports:
+      - "2101:2101"
+    environment:
+      - LOG_LEVEL=info
+    restart: unless-stopped
+    volumes:
+      - ./config:/app/config
+
+  server:
+    build:
+      context: ..
+      dockerfile: docker/server/Dockerfile
+    environment:
+      - LOG_LEVEL=info
+      - CASTER_HOST=caster
+      - CASTER_PORT=2101
+      - CASTER_USERNAME=admin
+      - CASTER_PASSWORD=password
+      - CASTER_MOUNTPOINT=RTCM33
+    restart: unless-stopped
+    depends_on:
+      - caster
