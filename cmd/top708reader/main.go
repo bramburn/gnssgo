@@ -286,7 +286,12 @@ func monitorRTK(device *top708.TOP708Device, sigChan chan os.Signal) {
 	if err != nil {
 		log.Fatalf("Failed to connect to NTRIP server: %v", err)
 	}
-	defer ntripClient.Disconnect()
+	// Use defer with a function to handle potential nil pointer
+	defer func() {
+		if ntripClient != nil {
+			ntripClient.Disconnect()
+		}
+	}()
 	fmt.Println("Connected to NTRIP server successfully.")
 
 	// Create GNSS receiver
@@ -294,7 +299,12 @@ func monitorRTK(device *top708.TOP708Device, sigChan chan os.Signal) {
 	if err != nil {
 		log.Fatalf("Failed to create GNSS receiver: %v", err)
 	}
-	defer gnssReceiver.Close()
+	// Use defer with a function to handle potential nil pointer
+	defer func() {
+		if gnssReceiver != nil {
+			gnssReceiver.Close()
+		}
+	}()
 
 	// Create RTK processor
 	fmt.Println("Starting RTK processor...")
@@ -308,7 +318,12 @@ func monitorRTK(device *top708.TOP708Device, sigChan chan os.Signal) {
 	if err != nil {
 		log.Fatalf("Failed to start RTK processing: %v", err)
 	}
-	defer processor.Stop()
+	// Use defer with a function to handle potential nil pointer
+	defer func() {
+		if processor != nil {
+			processor.Stop()
+		}
+	}()
 	fmt.Println("RTK processor started successfully.")
 
 	// Create RTK handler

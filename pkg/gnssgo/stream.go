@@ -1433,9 +1433,15 @@ func OpenTcpClient(path string, msg *string) *TcpClient {
 
 /* close tcp client ----------------------------------------------------------*/
 func (tcpcli *TcpClient) CloseTcpClient() {
+	if tcpcli == nil {
+		return
+	}
+
 	Tracet(3, "closetcpcli: sock=%d\n", tcpcli.svr.sock)
 
-	tcpcli.svr.sock.Close()
+	if tcpcli.svr.sock != nil {
+		tcpcli.svr.sock.Close()
+	}
 	tcpcli.svr.state = 0
 	//tcpcli.svr.sock = nil
 	tcpcli = nil
@@ -1810,9 +1816,15 @@ func OpenNtrip(path string, ctype int, msg *string) *NTrip {
 
 /* close ntrip ---------------------------------------------------------------*/
 func (ntrip *NTrip) CloseNtrip() {
+	if ntrip == nil {
+		return
+	}
+
 	Tracet(3, "closentrip: state=%d\n", ntrip.state)
 
-	ntrip.tcp.CloseTcpClient()
+	if ntrip.tcp != nil {
+		ntrip.tcp.CloseTcpClient()
+	}
 	ntrip = nil
 }
 
