@@ -3,14 +3,15 @@ go 1.23
 use (
 	.
 	./app/convbin
-	./gui
-	./pkg/gnssgo
-	./pkg/igs
-	./pkg/caster
-	./pkg/server
-	./pkg/integration
+	./cmd/rtk2go-test
 	./examples/ntrip/client
 	./examples/ntrip/server
+	./gui
+	./pkg/caster
+	./pkg/gnssgo
+	./pkg/igs
+	./pkg/integration
+	./pkg/server
 	./unittest
 // Uncomment the following lines to work with other applications
 // ./app/rnx2rtkp
