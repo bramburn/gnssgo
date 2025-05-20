@@ -282,28 +282,15 @@ func (p *RTKProcessor) GetSolution() RTKSolution {
 				}
 			}
 
-			// If we couldn't parse any GGA sentences, use simulated data
+			// If we couldn't parse any GGA sentences, just return a solution with NONE status
 			if sol.Stat == 0 {
-				// Simulate different solution types based on the solution count
-				switch p.solutions % 4 {
-				case 0:
-					sol.Stat = gnssgo.SOLQ_NONE
-				case 1:
-					sol.Stat = gnssgo.SOLQ_SINGLE
-				case 2:
-					sol.Stat = gnssgo.SOLQ_FLOAT
-				case 3:
-					sol.Stat = gnssgo.SOLQ_FIX
-				}
-
-				// Simulate position (London coordinates)
-				sol.Pos[0] = 51.5074 // Latitude
-				sol.Pos[1] = -0.1278 // Longitude
-				sol.Pos[2] = 45.0    // Height
-
-				// Simulate satellite count and age
-				sol.Ns = uint8(8 + (p.solutions % 8)) // Between 8-15 satellites
-				sol.Age = float32(p.solutions % 10)   // Age between 0-9 seconds
+				sol.Stat = gnssgo.SOLQ_NONE
+				// Keep position values as 0 to indicate no valid position
+				sol.Pos[0] = 0.0 // Latitude
+				sol.Pos[1] = 0.0 // Longitude
+				sol.Pos[2] = 0.0 // Height
+				sol.Ns = 0       // No satellites
+				sol.Age = 0.0    // No age
 			}
 		} else {
 			// If we can't read from the receiver, return a default solution

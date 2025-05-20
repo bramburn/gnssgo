@@ -131,17 +131,43 @@ func (p *RTKProcessorImpl) Stop() error {
 
 // GetSolution returns the current RTK solution
 func (p *RTKProcessorImpl) GetSolution() RTKSolution {
-	// In a real implementation, we would return the current RTK solution
-	// For now, we'll just simulate it
-	return RTKSolution{
-		Status:    rtkStatusSingle,
-		Latitude:  37.7749,
-		Longitude: -122.4194,
+	// Read data from the GNSS device
+	buffer := make([]byte, 4096)
+	n, err := p.receiver.ReadRaw(buffer)
+
+	// Default solution with no position
+	solution := RTKSolution{
+		Status:    rtkStatusNone,
+		Latitude:  0.0,
+		Longitude: 0.0,
 		Altitude:  0.0,
-		NSats:     10,
-		HDOP:      1.0,
+		NSats:     0,
+		HDOP:      0.0,
 		Age:       0.0,
 	}
+
+	if err == nil && n > 0 {
+		// Process the NMEA data to extract position
+		// This is a simplified implementation that would normally parse NMEA sentences
+		// We'll use the NMEAParser to extract position information
+		parser := NewNMEAParser()
+		data := string(buffer[:n])
+
+		// Parse the NMEA data
+		ggaData, err := parser.ParseGGA(data)
+		if err == nil {
+			// Update solution with actual position data
+			solution.Status = GetFixQualityName(ggaData.Quality)
+			solution.Latitude = ggaData.Latitude
+			solution.Longitude = ggaData.Longitude
+			solution.Altitude = ggaData.Altitude
+			solution.NSats = ggaData.NumSats
+			solution.HDOP = ggaData.HDOP
+			solution.Age = ggaData.DGPSAge
+		}
+	}
+
+	return solution
 }
 
 // GetStats returns the current RTK statistics

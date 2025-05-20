@@ -1,7 +1,14 @@
 # RTK2go Test Client Todo List
 
 ## Current Status
-The RTK2go test client has been modified to use actual GNSS data from the connected receiver on COM3 instead of hardcoded London coordinates. The client now correctly parses GGA sentences from the NMEA data stream and displays the real-time position with proper RTK status (NONE, SINGLE, DGPS, FLOAT, FIX).
+The RTK2go test client has been updated to use actual GNSS data from the connected receiver on COM3 instead of simulated data with hardcoded coordinates in Germany (Lat: 48.117300, Lon: 11.516667). The receiver.go file now properly uses the TOP708Device implementation to read real NMEA data from the physical GNSS receiver. The client correctly parses GGA sentences from the NMEA data stream and displays the real-time position with proper RTK status (NONE, SINGLE, DGPS, FLOAT, FIX).
+
+All simulated data fallbacks have been removed from:
+1. The receiver.go file - Now properly uses the TOP708Device to read actual NMEA data
+2. The pkg/ntrip/rtk_processor.go file - Removed the simulated data fallback with London coordinates
+3. The cmd/rtk2go-test/ntrip_wrapper.go file - Removed the simulated data with San Francisco coordinates
+
+The client now includes a default 30-second timeout for easier debugging and additional verbose output to help with troubleshooting.
 
 ## Remaining Tasks
 

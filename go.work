@@ -7,10 +7,12 @@ use (
 	./examples/ntrip/client
 	./examples/ntrip/server
 	./gui
+	./hardware/topgnss/top708
 	./pkg/caster
 	./pkg/gnssgo
 	./pkg/igs
 	./pkg/integration
+	./pkg/ntrip
 	./pkg/server
 	./unittest
 // Uncomment the following lines to work with other applications

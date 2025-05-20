@@ -8,7 +8,19 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	// Import local packages
+	_ "github.com/bramburn/gnssgo/hardware/topgnss/top708"
 )
+
+// getCurrentDirectory returns the current working directory
+func getCurrentDirectory() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		return fmt.Sprintf("Error getting current directory: %v", err)
+	}
+	return dir
+}
 
 // RTK status constants
 const (
@@ -41,7 +53,7 @@ func main() {
 	ntripMountpoint := flag.String("mountpoint", "OCF-RH55LS-Capel", "NTRIP mountpoint (OCF-RH55LS-Capel, MEDW, ozzy1)")
 	gnssPort := flag.String("gnss", "COM3", "GNSS receiver port")
 	baudRate := flag.Int("baud", 38400, "GNSS receiver baud rate")
-	duration := flag.Int("duration", 0, "Duration to run in seconds (0 for indefinite)")
+	duration := flag.Int("duration", 30, "Duration to run in seconds (0 for indefinite, default: 30s for debugging)")
 	verbose := flag.Bool("verbose", false, "Enable verbose output")
 	colorOutput := flag.Bool("color", true, "Enable colored output for RTK status")
 	reconnect := flag.Bool("reconnect", true, "Automatically reconnect on connection loss")
@@ -77,6 +89,12 @@ func main() {
 	consoleLogger.Printf("NTRIP Server: %s:%s", *ntripServer, *ntripPort)
 	consoleLogger.Printf("NTRIP Mountpoint: %s", *ntripMountpoint)
 	consoleLogger.Printf("GNSS Receiver: %s:%d", *gnssPort, *baudRate)
+	consoleLogger.Printf("Verbose mode: %v", *verbose)
+	consoleLogger.Printf("Run duration: %d seconds", *duration)
+
+	// Print debug information about the environment
+	consoleLogger.Printf("Debug: Current working directory: %s", getCurrentDirectory())
+	consoleLogger.Printf("Debug: Using actual GNSS data from physical receiver (not simulated data)")
 
 	// Create the RTK application with options
 	app := NewRTKApp(RTKAppOptions{
