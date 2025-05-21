@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bramburn/gnssgo/pkg/gnssgo"
 	"github.com/bramburn/gnssgo/pkg/gnssgo/util"
 )
 
@@ -319,14 +318,14 @@ func (stream *Stream) StreamSendCmd(cmd string) {
 			if ms > 3000 {
 				ms = 3000 // max 3 s
 			}
-			gnssgo.Sleepms(ms)
+			Sleepms(ms)
 
 		case strings.HasPrefix(cmd[1:], "BRATE"):
 			if n, _ := fmt.Sscanf(cmd[6:], "%d", &brate); n < 1 {
 				brate = 9600
 			}
 			SetBrate(str, brate)
-			gnssgo.Sleepms(500)
+			Sleepms(500)
 
 		case strings.HasPrefix(cmd[1:], "UBX"):
 			if m = GenUbx(cmd[4:], buff); m > 0 {
@@ -375,20 +374,20 @@ func (stream *Stream) StreamGetStatEx(msg *string) int {
 
 	switch byte(stream.Type) {
 	case STR_SERIAL:
-		state = stream.Port.(*SerialComm).StateSerial()
+		state = stream.Port.(*SerialComm).StateXSerial(msg)
 		*msg = "serial:\n"
 		*msg += fmt.Sprintf("  state   = %d\n", state)
 
 	case STR_FILE:
-		state = stream.Port.(*FileType).StateFile()
+		state = stream.Port.(*FileType).StateXFile(msg)
 		*msg = "file:\n"
 		*msg += fmt.Sprintf("  state   = %d\n", state)
 
 	case STR_TCPSVR:
-		state = stream.Port.(*TcpSvr).StatExTcpSvr(msg)
+		state = stream.Port.(*TcpSvr).StateXTcpSvr(msg)
 
 	case STR_TCPCLI:
-		state = stream.Port.(*TcpClient).StatExTcpClient(msg)
+		state = stream.Port.(*TcpClient).StateXTcpClient(msg)
 
 	case STR_NTRIPSVR, STR_NTRIPCLI:
 		state = stream.Port.(*NTrip).StatExNtrip(msg)

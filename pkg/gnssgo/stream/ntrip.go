@@ -113,15 +113,6 @@ type NTripConfig struct {
 	Debug        bool          // Debug mode
 }
 
-// NTrip represents a legacy NTRIP connection
-type NTrip struct {
-	state int        // State (0:close, 1:wait, 2:connect)
-	ctype int        // Type (0:server, 1:client)
-	url   string     // URL for proxy
-	buff  string     // Response buffer
-	tcp   *TcpClient // TCP client
-}
-
 // We're using the NTrip struct from types.go
 
 // EnhancedNTrip represents an enhanced NTRIP connection

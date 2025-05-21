@@ -3,7 +3,7 @@
 *
 * This example demonstrates how to use the convbin converter functionality
 * as an imported library in other Go applications.
-*/
+ */
 
 package main
 
@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bramburn/gnssgo"
 	"github.com/bramburn/gnssgo/app/convbin/converter"
+	gnssgo "github.com/bramburn/gnssgo/src"
 )
 
 func main() {
@@ -36,15 +36,15 @@ func main() {
 	// Set up input and output files
 	inputFile := "data.ubx"
 	outputFiles := []string{
-		"output.obs",  // OBS file
-		"output.nav",  // NAV file
-		"",            // GNAV file (not used)
-		"",            // HNAV file (not used)
-		"",            // QNAV file (not used)
-		"",            // LNAV file (not used)
-		"",            // CNAV file (not used)
-		"",            // INAV file (not used)
-		"",            // SBAS file (not used)
+		"output.obs", // OBS file
+		"output.nav", // NAV file
+		"",           // GNAV file (not used)
+		"",           // HNAV file (not used)
+		"",           // QNAV file (not used)
+		"",           // LNAV file (not used)
+		"",           // CNAV file (not used)
+		"",           // INAV file (not used)
+		"",           // SBAS file (not used)
 	}
 
 	// Detect format from file extension

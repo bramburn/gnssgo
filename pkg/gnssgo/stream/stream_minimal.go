@@ -19,29 +19,13 @@ func Tracet(level int, format string, args ...interface{}) {
 	util.Tracet(level, format, args...)
 }
 
-// OpenSerial opens a serial port
-func OpenSerial(path string, modeFlag int, msg *string) *SerialComm {
-	// Placeholder implementation
-	return nil
-}
+// OpenSerial is implemented in serial.go
 
-// OpenStreamFile opens a file stream
-func OpenStreamFile(path string, mode int, msg *string) *FileType {
-	// Placeholder implementation
-	return nil
-}
+// OpenStreamFile is implemented in file.go
 
-// OpenTcpSvr opens a TCP server
-func OpenTcpSvr(path string, msg *string) *TcpSvr {
-	// Placeholder implementation
-	return nil
-}
+// OpenTcpSvr is implemented in tcp.go
 
-// OpenTcpClient opens a TCP client
-func OpenTcpClient(path string, msg *string) *TcpClient {
-	// Placeholder implementation
-	return nil
-}
+// OpenTcpClient is implemented in tcp.go
 
 // OpenNtrip opens an NTRIP connection
 func OpenNtrip(path string, ctype int, msg *string) *NTrip {
@@ -55,17 +39,9 @@ func OpenNtripc(path string, msg *string) *NTripc {
 	return nil
 }
 
-// OpenUdpSvr opens a UDP server
-func OpenUdpSvr(path string, msg *string) *UdpConn {
-	// Placeholder implementation
-	return nil
-}
+// OpenUdpSvr is implemented in udp.go
 
-// OpenUdpClient opens a UDP client
-func OpenUdpClient(path string, msg *string) *UdpConn {
-	// Placeholder implementation
-	return nil
-}
+// OpenUdpClient is implemented in udp.go
 
 // OpenMemBuf opens a memory buffer
 func OpenMemBuf(path string, msg *string) *MemBuf {
@@ -79,10 +55,7 @@ func OpenFtp(path string, proto int, msg *string) *FtpConn {
 	return nil
 }
 
-// SetBrate sets the baud rate for a serial connection
-func SetBrate(str *Stream, brate int) {
-	// Placeholder implementation
-}
+// SetBrate is implemented in serial.go
 
 // GenUbx generates a UBX message
 func GenUbx(cmd string, buff []byte) int {
@@ -108,29 +81,13 @@ func GenHex(cmd string, buff []byte) int {
 	return 0
 }
 
-// SerialComm methods
-func (s *SerialComm) CloseSerial()                                    {}
-func (s *SerialComm) ReadSerial(buff []byte, n int, msg *string) int  { return 0 }
-func (s *SerialComm) WriteSerial(buff []byte, n int, msg *string) int { return 0 }
-func (s *SerialComm) StateSerial() int                                { return 0 }
+// SerialComm methods are implemented in serial.go
 
-// FileType methods
-func (f *FileType) CloseFile()                                     {}
-func (f *FileType) ReadFile(buff []byte, n int64, msg *string) int { return 0 }
-func (f *FileType) WriteFile(buff []byte, n int, msg *string) int  { return 0 }
-func (f *FileType) StateFile() int                                 { return 0 }
+// FileType methods are implemented in file.go
 
-// TcpSvr methods
-func (t *TcpSvr) CloseTcpSvr()                                    {}
-func (t *TcpSvr) ReadTcpSvr(buff []byte, n int, msg *string) int  { return 0 }
-func (t *TcpSvr) WriteTcpSvr(buff []byte, n int, msg *string) int { return 0 }
-func (t *TcpSvr) StatExTcpSvr(msg *string) int                    { return 0 }
+// TcpSvr methods are implemented in tcp.go
 
-// TcpClient methods
-func (t *TcpClient) CloseTcpClient()                                    {}
-func (t *TcpClient) ReadTcpClient(buff []byte, n int, msg *string) int  { return 0 }
-func (t *TcpClient) WriteTcpClient(buff []byte, n int, msg *string) int { return 0 }
-func (t *TcpClient) StatExTcpClient(msg *string) int                    { return 0 }
+// TcpClient methods are implemented in tcp.go
 
 // NTrip methods
 func (ntrip *NTrip) CloseNtrip()                                       {}
@@ -144,12 +101,7 @@ func (ntripc *NTripc) ReadNtripc(buff []byte, size int, msg *string) int  { retu
 func (ntripc *NTripc) WriteNtripc(buff []byte, size int, msg *string) int { return 0 }
 func (ntripc *NTripc) StatExNtripc(msg *string) int                       { return 0 }
 
-// UdpConn methods
-func (u *UdpConn) CloseUdp()                                          {}
-func (u *UdpConn) ReadUdpSvr(buff []byte, n int, msg *string) int     { return 0 }
-func (u *UdpConn) WriteUdpClient(buff []byte, n int, msg *string) int { return 0 }
-func (u *UdpConn) StatExUdpSvr(msg *string) int                       { return 0 }
-func (u *UdpConn) StateXUdpClient(msg *string) int                    { return 0 }
+// UdpConn methods are implemented in udp.go
 
 // MemBuf methods
 func (m *MemBuf) CloseMemBuf()                                    {}

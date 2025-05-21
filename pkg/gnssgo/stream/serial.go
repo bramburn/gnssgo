@@ -4,7 +4,6 @@ package stream
 import (
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"go.bug.st/serial"
@@ -37,7 +36,7 @@ func OpenSerial(path string, modeFlag int, msg *string) *SerialComm {
 	if index > 0 {
 		port = path[:index]
 		parts := strings.Split(path[index+1:], ":")
-		
+
 		if len(parts) > 0 && parts[0] != "" {
 			fmt.Sscanf(parts[0], "%d", &brate)
 		}
@@ -52,7 +51,7 @@ func OpenSerial(path string, modeFlag int, msg *string) *SerialComm {
 		}
 		if len(parts) > 4 && parts[4] != "" {
 			fctr = parts[4]
-			
+
 			// Check for TCP port
 			hashIndex := strings.Index(fctr, "#")
 			if hashIndex > 0 {
