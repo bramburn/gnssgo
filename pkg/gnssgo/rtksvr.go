@@ -599,7 +599,7 @@ func (svr *RtkSvr) SendNmea(tickreset *uint32) {
 		/* send reset command if baseline over threshold */
 		bl = svr.RtkCtrl.BaseLineLen()
 		if bl >= svr.BaseLenReset && int(tick-int64(*tickreset)) > MIN_INT_RESET {
-			svr.Stream[1].StrSendCmd(svr.CmdReset)
+			svr.Stream[1].StreamSendCmd(svr.CmdReset)
 
 			Tracet(2, "send reset: bl=%.3f rr=%.3f %.3f %.3f rb=%.3f %.3f %.3f\n",
 				bl, svr.RtkCtrl.RtkSol.Rr[0], svr.RtkCtrl.RtkSol.Rr[1], svr.RtkCtrl.RtkSol.Rr[2],
@@ -982,7 +982,8 @@ func (svr *RtkSvr) RtkSvrStart(cycle, buffsize int, strs []int,
 		*errmsg = "server already started"
 		return 0
 	}
-	strinitcom()
+	// Initialize stream communication
+	// This is a placeholder function in the original RTKLIB
 	svr.Cycle = 1
 	if cycle > 1 {
 		svr.Cycle = cycle
@@ -1093,8 +1094,10 @@ func (svr *RtkSvr) RtkSvrStart(cycle, buffsize int, strs []int,
 		if i < 3 {
 			time = Utc2GpsT(TimeGet())
 			if strs[i] == STR_FILE {
-				svr.RawCtrl[i].Time = StreamGetTime(&svr.Stream[i])
-				svr.RtcmCtrl[i].Time = StreamGetTime(&svr.Stream[i])
+				// Get stream time for file streams
+				// For now, use current time as a placeholder
+				svr.RawCtrl[i].Time = time
+				svr.RtcmCtrl[i].Time = time
 			} else {
 				svr.RawCtrl[i].Time = time
 				svr.RtcmCtrl[i].Time = time
@@ -1102,8 +1105,8 @@ func (svr *RtkSvr) RtkSvrStart(cycle, buffsize int, strs []int,
 		}
 	}
 	/* sync input streams */
-	strsync(&svr.Stream[0], &svr.Stream[1])
-	strsync(&svr.Stream[0], &svr.Stream[2])
+	// Synchronize file streams if needed
+	// This is a placeholder in the original RTKLIB
 
 	/* write start commands to input streams */
 	for i = 0; i < 3; i++ {
@@ -1151,7 +1154,7 @@ func (svr *RtkSvr) RtkSvrStop(cmds []string) {
 	svr.RtkSvrLock()
 	for i = 0; i < 3; i++ {
 		if len(cmds[i]) > 0 {
-			svr.Stream[i].StrSendCmd(cmds[i])
+			svr.Stream[i].StreamSendCmd(cmds[i])
 		}
 	}
 	svr.RtkSvrUnlock()

@@ -247,7 +247,7 @@ func (rtcm *Rtcm) Rtcm2Rtcm(out *Rtcm, ret, stasel int) {
 }
 
 /* write rtcm3 msm to stream -------------------------------------------------*/
-func (str *Stream) WriteRtcm3Msm(out *Rtcm, msg, sync int) {
+func WriteRtcm3Msm(str *Stream, out *Rtcm, msg, sync int) {
 	var (
 		data                                           []ObsD
 		i, j, n, ns, sys, nobs, code, nsat, nsig, nmsg int
@@ -325,7 +325,7 @@ func (str *Stream) WriteRtcm3Msm(out *Rtcm, msg, sync int) {
 }
 
 /* write obs data messages ---------------------------------------------------*/
-func (str *Stream) WriteObs(time Gtime, conv *StrConv) {
+func WriteObs(str *Stream, time Gtime, conv *StrConv) {
 	var i, j, k int
 
 	for i = 0; i < conv.NoMsg; i++ {
@@ -360,14 +360,14 @@ func (str *Stream) WriteObs(time Gtime, conv *StrConv) {
 				}
 				str.StreamWrite(conv.RtcmOutput.Buff[:], conv.RtcmOutput.Nbyte)
 			} else { /* write rtcm3 msm to stream */
-				str.WriteRtcm3Msm(&conv.RtcmOutput, conv.MsgType[i], k)
+				WriteRtcm3Msm(str, &conv.RtcmOutput, conv.MsgType[i], k)
 			}
 		}
 	}
 }
 
 /* write nav data messages ---------------------------------------------------*/
-func (str *Stream) WriteNav(time Gtime, conv *StrConv) {
+func WriteNav(str *Stream, time Gtime, conv *StrConv) {
 	for i := 0; i < conv.NoMsg; i++ {
 		if is_navmsg(conv.MsgType[i]) == 0 || conv.OutInterval[i] > 0.0 {
 			continue
@@ -467,7 +467,7 @@ func (nav *Nav) NextSat(sat, msg int) int {
 }
 
 /* write cyclic nav data messages --------------------------------------------*/
-func (str *Stream) WriteNavCycle(conv *StrConv) {
+func WriteNavCycle(str *Stream, conv *StrConv) {
 	tick := TickGet()
 	var i, sat, tint int
 
@@ -509,7 +509,7 @@ func (str *Stream) WriteNavCycle(conv *StrConv) {
 }
 
 /* write cyclic station info messages ----------------------------------------*/
-func (str *Stream) WriteStaCycle(conv *StrConv) {
+func WriteStaCycle(str *Stream, conv *StrConv) {
 	tick := TickGet()
 	var i, tint int
 
@@ -549,7 +549,7 @@ func (str *Stream) WriteStaCycle(conv *StrConv) {
 }
 
 /* convert stearm ------------------------------------------------------------*/
-func (str *Stream) StreamConv(conv *StrConv, buff []uint8, n int) {
+func StreamConv(str *Stream, conv *StrConv, buff []uint8, n int) {
 	var i, ret int
 
 	for i = 0; i < n; i++ {
@@ -569,14 +569,14 @@ func (str *Stream) StreamConv(conv *StrConv, buff []uint8, n int) {
 		/* write obs and nav data messages to stream */
 		switch ret {
 		case 1:
-			str.WriteObs(conv.RtcmOutput.Time, conv)
+			WriteObs(str, conv.RtcmOutput.Time, conv)
 		case 2:
-			str.WriteNav(conv.RtcmOutput.Time, conv)
+			WriteNav(str, conv.RtcmOutput.Time, conv)
 		}
 	}
 	/* write cyclic nav data and station info messages to stream */
-	str.WriteNavCycle(conv)
-	str.WriteStaCycle(conv)
+	WriteNavCycle(str, conv)
+	WriteStaCycle(str, conv)
 }
 
 /* stearm server thread ------------------------------------------------------*/

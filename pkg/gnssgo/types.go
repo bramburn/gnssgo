@@ -349,19 +349,6 @@ const (
 	POSOPT_FILE       = 2                         /* pos option: read from pos file */
 	POSOPT_RINEX      = 3                         /* pos option: rinex header pos */
 	POSOPT_RTCM       = 4                         /* pos option: rtcm/raw station pos */
-	STR_NONE          = 0                         /* stream type: none */
-	STR_SERIAL        = 1                         /* stream type: serial */
-	STR_FILE          = 2                         /* stream type: file */
-	STR_TCPSVR        = 3                         /* stream type: TCP server */
-	STR_TCPCLI        = 4                         /* stream type: TCP client */
-	STR_NTRIPSVR      = 5                         /* stream type: NTRIP server */
-	STR_NTRIPCLI      = 6                         /* stream type: NTRIP client */
-	STR_FTP           = 7                         /* stream type: ftp */
-	STR_HTTP          = 8                         /* stream type: http */
-	STR_NTRIPCAS      = 9                         /* stream type: NTRIP caster */
-	STR_UDPSVR        = 10                        /* stream type: UDP server */
-	STR_UDPCLI        = 11                        /* stream type: UDP server */
-	STR_MEMBUF        = 12                        /* stream type: memory buffer */
 	STRFMT_RTCM2      = 0                         /* stream format: RTCM 2 */
 	STRFMT_RTCM3      = 1                         /* stream format: RTCM 3 */
 	STRFMT_OEM4       = 2                         /* stream format: NovAtel OEMV/4 */
@@ -381,9 +368,6 @@ const (
 	STRFMT_SBAS       = 16                        /* stream format: SBAS messages */
 	STRFMT_NMEA       = 17                        /* stream format: NMEA 0183 */
 	MAXRCVFMT         = 12                        /* max number of receiver format */
-	STR_MODE_R        = 0x1                       /* stream mode: read */
-	STR_MODE_W        = 0x2                       /* stream mode: write */
-	STR_MODE_RW       = 0x3                       /* stream mode: read/write */
 	GEOID_EMBEDDED    = 0                         /* geoid model: embedded geoid */
 	GEOID_EGM96_M150  = 1                         /* geoid model: EGM96 15x15" */
 	GEOID_EGM2008_M25 = 2                         /* geoid model: EGM2008 2.5x2.5" */
@@ -1057,21 +1041,8 @@ type Rtk struct { /* RTK control/result type */
 	ErrBuf string /* error message buffer */
 	Opt    PrcOpt /* processing options */
 }
-type Stream struct { /* stream type */
-	Type                   int         /* type (STR_???) */
-	Mode                   int         /* mode (STR_MODE_?) */
-	State                  int         /* state (-1:error,0:close,1:open) */
-	InBytes, InRate        uint32      /* input bytes/rate */
-	OutBytes, OutRate      uint32      /* output bytes/rate */
-	TickInput              int64       /* input tick tick */
-	TickOutput             int64       /* output tick */
-	TickActive             int64       /* active tick */
-	InByeTick, OutByteTick uint32      /* input/output bytes at tick */
-	Lock                   sync.Mutex  /* lock flag */
-	Port                   interface{} /* type dependent port control struct */
-	Path                   string      /* stream path */
-	Msg                    string      /* stream message */
-}
+
+// Stream struct is now imported from pkg/gnssgo/stream
 
 type Raw struct { /* receiver raw data control type */
 	Time       Gtime                         /* message time */

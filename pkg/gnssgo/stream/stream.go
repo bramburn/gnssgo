@@ -354,6 +354,11 @@ func (stream *Stream) StreamSendCmd(cmd string) {
 	stream.StreamWrite([]byte(cmd), len(cmd))
 }
 
+// StrSendCmd is an alias for StreamSendCmd for backward compatibility
+func (stream *Stream) StrSendCmd(cmd string) {
+	stream.StreamSendCmd(cmd)
+}
+
 // StreamGetState gets stream state
 func (stream *Stream) StreamGetState() int {
 	if stream.Port == nil {
@@ -421,5 +426,22 @@ func (stream *Stream) StreamGetStatEx(msg *string) int {
 	}
 
 	stream.StreamUnlock()
+	return state
+}
+
+// StreamStat gets stream status and message
+func (stream *Stream) StreamStat(msg *string) int {
+	var state int
+
+	if stream.Port == nil {
+		*msg = ""
+		return 0
+	}
+
+	stream.StreamLock()
+	state = stream.State
+	*msg = stream.Msg
+	stream.StreamUnlock()
+
 	return state
 }

@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"github.com/bramburn/gnssgo/pkg/gnssgo/gtime"
 	"github.com/bramburn/gnssgo/pkg/gnssgo/util"
 )
 
@@ -17,6 +18,65 @@ func Sleepms(ms int) {
 // Tracet prints a trace message
 func Tracet(level int, format string, args ...interface{}) {
 	util.Tracet(level, format, args...)
+}
+
+// StreamGetTime gets stream time
+func StreamGetTime(stream *Stream) gtime.Gtime {
+	var time gtime.Gtime
+
+	if stream == nil || stream.Port == nil {
+		return time
+	}
+
+	stream.StreamLock()
+	defer stream.StreamUnlock()
+
+	switch byte(stream.Type) {
+	case STR_FILE:
+		time = stream.Port.(*FileType).time
+	default:
+		time = gtime.Utc2GpsT(gtime.TimeGet())
+	}
+
+	return time
+}
+
+// strinitcom initializes stream communication
+func strinitcom() {
+	// This is a placeholder function that would initialize any global
+	// communication resources. In the original RTKLIB, this would initialize
+	// the Windows socket library.
+	Tracet(3, "strinitcom:\n")
+}
+
+// strsync synchronizes streams
+func strsync(stream1, stream2 *Stream) {
+	// This is a placeholder function that would synchronize two streams.
+	// In the original RTKLIB, this would synchronize file streams.
+	Tracet(3, "strsync:\n")
+
+	if stream1 == nil || stream2 == nil {
+		return
+	}
+
+	// If both streams are file streams, synchronize them
+	if stream1.Type == STR_FILE && stream2.Type == STR_FILE {
+		file1 := stream1.Port.(*FileType)
+		file2 := stream2.Port.(*FileType)
+
+		// Synchronize file positions
+		if file1.time.Time != 0 && file2.time.Time != 0 {
+			if gtime.TimeDiff(file1.time, file2.time) > 0.0 {
+				// If file1 is ahead of file2, rewind file1
+				file1.repmode = 1 // slave mode
+				file1.offset = 0
+			} else {
+				// If file2 is ahead of file1, rewind file2
+				file2.repmode = 1 // slave mode
+				file2.offset = 0
+			}
+		}
+	}
 }
 
 // OpenSerial is implemented in serial.go

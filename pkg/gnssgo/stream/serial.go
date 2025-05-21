@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"go.bug.st/serial"
+	"go.bug.st/serial/enumerator"
 )
 
 // Default serial port settings
@@ -258,4 +259,18 @@ func SetBrate(str *Stream, brate int) {
 	s.SetReadTimeout(seri.timeout)
 	seri.serialio = s
 	seri.err = 0
+}
+
+// ListSerialPorts lists available serial ports
+func ListSerialPorts() ([]string, error) {
+	ports, err := enumerator.GetDetailedPortsList()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []string
+	for _, port := range ports {
+		result = append(result, port.Name)
+	}
+	return result, nil
 }
