@@ -162,7 +162,6 @@ func main() {
 		consoleLogger.Println("Connected to NTRIP server successfully.")
 	}
 	// We'll handle disconnection manually to avoid panic
-	// DO NOT call Disconnect() on the NTRIP client because it causes a panic
 	// The OS will clean up the resources when the process exits
 
 	// Start the RTK processor

@@ -101,3 +101,20 @@ func (c *Client) IsConnected() bool {
 func (c *Client) GetStream() *gnssgo.Stream {
 	return &c.stream
 }
+
+// Write writes data to the NTRIP server
+func (c *Client) Write(p []byte) (int, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if !c.connected {
+		return 0, fmt.Errorf("not connected")
+	}
+
+	n := c.stream.StreamWrite(p, len(p))
+	if n <= 0 {
+		return 0, fmt.Errorf("failed to write to NTRIP server")
+	}
+
+	return n, nil
+}

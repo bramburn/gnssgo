@@ -312,3 +312,90 @@ The two-letter prefix (e.g., GP, GL, GA, GB, GN) in the message header indicates
 
 [^3_10]: https://developer.sbg-systems.com/sbgECom/5.1/nmea_msg.html
 
+Yes, there are custom NMEA messages used specifically for RTK applications, in addition to the standard NMEA sentences. While standard NMEA messages like `$GGA`, `$GSA`, `$GSV`, `$RMC`, `$GST`, `$VTG`, and `$ZDA` are widely used for RTK to convey position, fix status, satellite information, and error estimates, some GNSS manufacturers extend the NMEA protocol with proprietary or custom messages to provide RTK-specific data that is not covered by the official standard[4][5].
+
+### Examples of Custom RTK-Related NMEA Messages
+
+- **EBP – RTK Base Position**  
+  This custom message, used by some receivers (such as Emlid Reach), provides the RTK base station's position. This is particularly useful when the rover needs to log or communicate the base station's exact coordinates for post-processing or integrity checks[4].
+
+- **ETC – Tilt Compensation Data**  
+  Another example from Emlid Reach RS3, the `ETC` message provides tilt compensation data, which is important for survey applications where the receiver may not always be perfectly level. This allows for more accurate position calculations even when the antenna is tilted[4].
+
+### Custom Message Implementation
+
+The NMEA standard permits manufacturers to develop and implement custom messages when the standard set does not cover all required data for specialized applications like RTK. These custom messages typically follow the NMEA sentence structure (starting with `$`, comma-separated fields, and ending with a checksum), but their content and interpretation are defined by the manufacturer[4][5].
+
+### Parsing Custom NMEA Messages
+
+Software tools and libraries (such as MATLAB's `nmeaParser`) allow users to specify and parse custom NMEA sentences by providing the message ID and a custom parser function. This flexibility is essential for integrating advanced RTK features into third-party systems[5].
+
+---
+
+**Summary:**  
+Custom NMEA messages such as `EBP` (RTK base position) and `ETC` (tilt compensation) are used by some GNSS manufacturers to provide RTK-specific data not available in the standard NMEA set. These are implemented in addition to standard messages and are essential for advanced RTK workflows in certain receivers[4][5].
+
+Citations:
+[1] https://www.singularxyz.com/3485.html
+[2] https://www.gpsworld.com/what-exactly-is-gps-nmea-data/
+[3] https://support.javad.com/index.php?threads%2Fsigma-rtk-nmea-messages.3836%2F
+[4] https://blog.emlid.com/what-is-nmea-and-how-to-feed-data-from-reach-to-a-third-party-device/
+[5] https://www.mathworks.com/help/nav/ref/nmeaparser-system-object.html
+[6] https://talk.newagtalk.com/forums/thread-view.asp?tid=449927&DisplayType=nested&setCookie=1
+[7] https://community.sparkfun.com/t/rtk-surveyor-need-dual-output-bt-nmea-rs232-38400-baud/47043
+[8] https://gis.stackexchange.com/questions/380210/self-made-rtk-correction-with-rtcm-data
+[9] https://comnavtech.com/about/blogs/447.html
+[10] https://campar.in.tum.de/twiki/pub/Chair/NaviGpsDemon/nmea.html
+
+---
+Answer from Perplexity: pplx.ai/share
+
+The most common custom NMEA messages used in RTK devices are proprietary extensions developed by manufacturers to convey RTK-specific data not covered by the standard NMEA-0183 set. These custom messages follow the NMEA sentence structure but include additional or specialized information essential for advanced RTK workflows.
+
+---
+
+## **Most Common Custom NMEA Messages in RTK Devices**
+
+| Custom Message   | Purpose/Content Description                                                                                 | Example Use Case                        |
+|------------------|------------------------------------------------------------------------------------------------------------|-----------------------------------------|
+| **PTNL,AVR**     | Provides time, yaw, tilt, range, mode, PDOP, and number of satellites for Moving Baseline RTK              | Heading and attitude determination      |
+| **PTNL,BPQ**     | Contains base station position and position quality indicator                                               | Logging or transmitting RTK base data   |
+| **PTNL,DG**      | Reports L-band corrections and beacon signal strength and related information                              | Monitoring correction signal quality    |
+| **PTNL,EVT**     | Event marker data (timing and event logging)                                                               | Georeferencing external events          |
+| **EBP**          | RTK base position (used by Emlid Reach receivers)                                                          | Providing base station coordinates      |
+| **ETC**          | Tilt compensation data (used by Emlid Reach RS3)                                                           | Correcting position for antenna tilt    |
+
+These messages are in addition to the standard NMEA sentences (like GGA, GSA, GSV, RMC, GST, VTG, ZDA) that are universally used in RTK devices for reporting position, fix status, satellite info, and error statistics[3].
+
+---
+
+## **Why Custom NMEA Messages Are Used**
+
+- **Enhanced RTK Functionality:** They provide details such as heading, tilt, base station information, and event timing, which are not available in the standard NMEA messages.
+- **Advanced Surveying and Integration:** Custom messages support advanced applications like moving baseline RTK (for heading), tilt compensation (for surveying with the pole not held vertically), and precise event logging.
+
+---
+
+## **Integration and Support**
+
+- Custom NMEA messages are typically supported by the manufacturer’s own software and, increasingly, by third-party GIS and surveying platforms as these features become more widely adopted[3].
+- When not natively supported, custom messages can be parsed by user-developed scripts or applications using NMEA parsing libraries.
+
+---
+
+**In summary:**  
+The most common custom NMEA messages in RTK devices include PTNL,AVR (attitude/heading), PTNL,BPQ (base position), PTNL,DG (correction signal status), PTNL,EVT (event markers), EBP (base position), and ETC (tilt compensation). These messages extend RTK device capabilities beyond the standard NMEA set, supporting high-precision, application-specific workflows[3].
+
+Citations:
+[1] https://www.singularxyz.com/3485.html
+[2] https://www.gpsworld.com/what-exactly-is-gps-nmea-data/
+[3] https://blog.emlid.com/what-is-nmea-and-how-to-feed-data-from-reach-to-a-third-party-device/
+[4] https://www.unmannedsystemstechnology.com/feature/key-gnss-data-formats-rinex-rtcm-and-nmea-explained/
+[5] https://www.use-snip.com/kb/knowledge-base/an-rtcm-message-cheat-sheet/
+[6] https://campar.in.tum.de/twiki/pub/Chair/NaviGpsDemon/nmea.html
+[7] https://learn.sparkfun.com/tutorials/sparkfun-rtk-express-hookup-guide/all?print=1
+[8] https://comnavtech.com/about/blogs/584.html
+[9] https://www.digikey.co.uk/en/maker/projects/sparkfun-rtk-facet-hookup-guide/83543ba40878480b9ffa5a5e4c53d670
+
+---
+Answer from Perplexity: pplx.ai/share
