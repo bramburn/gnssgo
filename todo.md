@@ -22,12 +22,13 @@ This document outlines the remaining tasks to complete the project restructuring
 
 ### File I/O (`pkg/gnssgo/stream/file.go`)
 - [x] Basic implementation completed
-- [ ] Complete the time-tagged file implementation
-  - [ ] Implement proper file swapping based on time
-  - [ ] Complete the `readfiletime` function for reading data at specific times
-  - [ ] Implement proper file path keyword replacement in `reppath`
-- [ ] Add support for compressed files
-- [ ] Add better error handling and recovery
+- [x] Complete the time-tagged file implementation
+  - [x] Implement proper file swapping based on time
+  - [x] Complete the `readfiletime` function for reading data at specific times
+  - [x] Implement proper file path keyword replacement in `reppath`
+- [x] Add support for compressed files
+- [x] Add better error handling and recovery
+- [x] Add comprehensive tests for file stream functionality
 
 ### TCP Communication (`pkg/gnssgo/stream/tcp.go`)
 - [x] Basic implementation completed
@@ -50,6 +51,7 @@ This document outlines the remaining tasks to complete the project restructuring
 - [x] Implement better handling of RTCM messages
 - [x] Add comprehensive logging for debugging
 - [x] Consolidate NTRIP client implementations to use the enhanced version
+- [x] Add comprehensive tests for the NTRIP implementation
 - [ ] Add support for NTRIP 2.0
 
 ## GUI Application

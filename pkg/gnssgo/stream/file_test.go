@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/bramburn/gnssgo/pkg/gnssgo/gtime"
 )
@@ -92,9 +91,10 @@ func TestFileSwapping(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	// Create a test file path with time pattern
-	testPath := filepath.Join(tempDir, "%Y%m%d.dat")
-	
+	// Create a test file path with time pattern that includes hours
+	// This ensures the path will change when we simulate time passing
+	testPath := filepath.Join(tempDir, "%Y%m%d%H.dat")
+
 	// Create a file stream with swap interval of 1 hour
 	var msg string
 	file := OpenStreamFile(testPath+"::S=1", STR_MODE_W, &msg)
@@ -111,10 +111,17 @@ func TestFileSwapping(t *testing.T) {
 
 	// Get the current file path
 	initialPath := file.openpath
+	t.Logf("Initial file path: %s", initialPath)
+	t.Logf("Initial wtime: %s", gtime.TimeStr(file.wtime, 0))
+	t.Logf("Swap interval: %.2f hours", file.swapintv)
 
 	// Simulate time passing (more than swap interval)
 	// This is a bit hacky but necessary for testing
+	oldTime := file.wtime
 	file.wtime = gtime.TimeAdd(file.wtime, -3600.1) // Subtract more than 1 hour
+	t.Logf("Modified wtime: %s (subtracted %.2f seconds)",
+		gtime.TimeStr(file.wtime, 0),
+		gtime.TimeDiff(oldTime, file.wtime))
 
 	// Write again to trigger swap
 	if n := file.WriteFile(data, len(data), &msg); n <= 0 {
@@ -122,6 +129,9 @@ func TestFileSwapping(t *testing.T) {
 	}
 
 	// Check if file was swapped
+	t.Logf("Final file path: %s", file.openpath)
+	t.Logf("Final wtime: %s", gtime.TimeStr(file.wtime, 0))
+
 	if file.openpath == initialPath {
 		t.Errorf("File was not swapped after interval passed")
 	}
@@ -143,10 +153,10 @@ func TestCompressedFileHandling(t *testing.T) {
 	// Create a test gzip file
 	gzipPath := filepath.Join(tempDir, "test.gz")
 	var outPath string
-	
+
 	// Test the uncompress function
 	result := uncompress(gzipPath, &outPath)
-	
+
 	// We expect it to fail since we didn't actually create the file,
 	// but this at least tests that the function runs
 	if result != -1 && result != 0 {

@@ -614,12 +614,16 @@ func (ntrip *EnhancedNTrip) ReadNtrip(buff []byte, n int, msg *string) int {
 	// Use the most recent message
 	latestMsg := messages[len(messages)-1]
 
-	// Copy data to the output buffer
-	bytesToCopy := len(latestMsg)
-	if bytesToCopy > n {
-		bytesToCopy = n
+	// Check if the buffer is large enough
+	if len(latestMsg) > n {
+		if msg != nil {
+			*msg = fmt.Sprintf("Buffer too small: need %d bytes, have %d bytes", len(latestMsg), n)
+		}
+		return 0
 	}
 
+	// Copy data to the output buffer
+	bytesToCopy := len(latestMsg)
 	copy(buff, latestMsg[:bytesToCopy])
 
 	// Log the read operation if debug is enabled
