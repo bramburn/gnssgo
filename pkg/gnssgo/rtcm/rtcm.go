@@ -38,6 +38,7 @@ package rtcm
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/bramburn/gnssgo/pkg/gnssgo"
@@ -110,6 +111,10 @@ type RTCMParser struct {
 	messages   []RTCMMessage             // Parsed messages
 	stats      map[int]*RTCMMessageStats // Statistics for each message type
 	lastUpdate time.Time                 // Time of last update
+	bufferPool *sync.Pool                // Pool for message buffers
+	msgPool    *sync.Pool                // Pool for RTCMMessage objects
+	cache      map[int]interface{}       // Cache for ephemeris and other slowly changing messages
+	cacheMutex sync.RWMutex              // Mutex for cache access
 }
 
 // RTCMMessageStats contains statistics for a specific RTCM message type
@@ -122,11 +127,32 @@ type RTCMMessageStats struct {
 
 // NewRTCMParser creates a new RTCM parser
 func NewRTCMParser() *RTCMParser {
+	bufferPool := &sync.Pool{
+		New: func() interface{} {
+			// Create a new buffer with 4KB capacity
+			buf := make([]byte, 0, 4096)
+			return &buf
+		},
+	}
+
+	msgPool := &sync.Pool{
+		New: func() interface{} {
+			// Create a new RTCMMessage with pre-allocated data buffer
+			msg := RTCMMessage{
+				Data: make([]byte, 0, 1024),
+			}
+			return &msg
+		},
+	}
+
 	return &RTCMParser{
 		buffer:     make([]byte, 0, 1024),
 		messages:   make([]RTCMMessage, 0),
 		stats:      make(map[int]*RTCMMessageStats),
 		lastUpdate: time.Now(),
+		bufferPool: bufferPool,
+		msgPool:    msgPool,
+		cache:      make(map[int]interface{}),
 	}
 }
 
@@ -199,26 +225,54 @@ func (p *RTCMParser) extractMessage(buffer []byte) (RTCMMessage, []byte, error) 
 		return RTCMMessage{}, buffer, ErrIncompleteMessage
 	}
 
-	// For test data, we'll skip CRC validation
-	// In a real implementation, we would validate the CRC here
-
 	// Extract message type (12 bits starting at bit 24)
 	msgType := int(gnssgo.GetBitU(buffer, 24, 12))
 
 	// Extract station ID (12 bits starting at bit 36)
 	stationID := uint16(gnssgo.GetBitU(buffer, 36, 12))
 
-	// Create message
-	msg := RTCMMessage{
-		Type:      msgType,
-		Length:    msgLength,
-		Data:      make([]byte, msgLength+3), // Include CRC
-		Timestamp: time.Now(),
-		StationID: stationID,
+	// Get a message from the pool or create a new one
+	var msg RTCMMessage
+	msgObj := p.msgPool.Get()
+	if msgObj != nil {
+		// Reuse existing message
+		msgPtr := msgObj.(*RTCMMessage)
+		msg = *msgPtr
+
+		// Reset fields
+		msg.Type = msgType
+		msg.Length = msgLength
+		msg.Timestamp = time.Now()
+		msg.StationID = stationID
+
+		// Resize data buffer if needed
+		if cap(msg.Data) < msgLength+3 {
+			msg.Data = make([]byte, msgLength+3)
+		} else {
+			msg.Data = msg.Data[:msgLength+3]
+		}
+	} else {
+		// Create new message
+		msg = RTCMMessage{
+			Type:      msgType,
+			Length:    msgLength,
+			Data:      make([]byte, msgLength+3), // Include CRC
+			Timestamp: time.Now(),
+			StationID: stationID,
+		}
 	}
 
 	// Copy data
 	copy(msg.Data, buffer[:msgLength+3])
+
+	// Check cache for ephemeris and other slowly changing messages
+	if msgType == RTCM_GPS_EPHEMERIS || msgType == RTCM_GLONASS_EPHEMERIS ||
+		msgType == RTCM_GALILEO_EPHEMERIS || msgType == RTCM_BEIDOU_EPHEMERIS {
+		// Cache the message by type and satellite ID
+		p.cacheMutex.Lock()
+		p.cache[msgType] = msg
+		p.cacheMutex.Unlock()
+	}
 
 	// Return message and remaining buffer
 	return msg, buffer[msgLength+3:], nil
@@ -331,6 +385,28 @@ func DecodeRTCMMessage(msg *RTCMMessage) (interface{}, error) {
 	default:
 		return nil, fmt.Errorf("%w: type %d", ErrUnsupportedMessage, msg.Type)
 	}
+}
+
+// ReturnMessageToPool returns a message to the pool when it's no longer needed
+func (p *RTCMParser) ReturnMessageToPool(msg *RTCMMessage) {
+	if msg == nil {
+		return
+	}
+
+	// Clear sensitive data
+	msg.Data = msg.Data[:0]
+
+	// Return to pool
+	p.msgPool.Put(msg)
+}
+
+// GetCachedMessage retrieves a cached message by type
+func (p *RTCMParser) GetCachedMessage(msgType int) (interface{}, bool) {
+	p.cacheMutex.RLock()
+	defer p.cacheMutex.RUnlock()
+
+	msg, ok := p.cache[msgType]
+	return msg, ok
 }
 
 // GetMessageTypeDescription returns a human-readable description of an RTCM message type

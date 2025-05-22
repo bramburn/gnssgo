@@ -98,20 +98,56 @@ func decodeSSRHeader(msg *RTCMMessage) (*SSRHeader, int, error) {
 
 	// Determine GNSS ID from message type
 	switch {
-	case msg.Type >= 1057 && msg.Type <= 1068:
+	// GPS SSR messages
+	case msg.Type >= 1057 && msg.Type <= 1062: // GPS orbit and clock corrections
 		header.GNSSID = 0 // GPS
-	case msg.Type >= 1063 && msg.Type <= 1068:
+	case msg.Type >= 1063 && msg.Type <= 1068: // GPS code and phase biases
+		header.GNSSID = 0 // GPS
+
+	// GLONASS SSR messages
+	case msg.Type >= 1057+30 && msg.Type <= 1062+30: // GLONASS orbit and clock corrections (1087-1092)
 		header.GNSSID = 1 // GLONASS
+	case msg.Type >= 1063+30 && msg.Type <= 1068+30: // GLONASS code and phase biases (1093-1098)
+		header.GNSSID = 1 // GLONASS
+
+	// Galileo SSR messages
 	case msg.Type >= 1240 && msg.Type <= 1245:
 		header.GNSSID = 2 // Galileo
+
+	// QZSS SSR messages
 	case msg.Type >= 1246 && msg.Type <= 1251:
 		header.GNSSID = 3 // QZSS
+
+	// BeiDou SSR messages
 	case msg.Type >= 1252 && msg.Type <= 1257:
 		header.GNSSID = 4 // BeiDou
+
+	// SBAS SSR messages
 	case msg.Type >= 1258 && msg.Type <= 1263:
 		header.GNSSID = 5 // SBAS
+
+	// IRNSS SSR messages
 	case msg.Type >= 1264 && msg.Type <= 1269:
 		header.GNSSID = 6 // IRNSS
+
+	// Phase bias messages
+	case msg.Type >= 1265 && msg.Type <= 1270:
+		// Determine GNSS ID based on the specific message type
+		switch msg.Type {
+		case 1265:
+			header.GNSSID = 0 // GPS
+		case 1266:
+			header.GNSSID = 1 // GLONASS
+		case 1267:
+			header.GNSSID = 2 // Galileo
+		case 1268:
+			header.GNSSID = 3 // QZSS
+		case 1269:
+			header.GNSSID = 4 // BeiDou
+		case 1270:
+			header.GNSSID = 5 // SBAS
+		}
+
 	default:
 		return nil, 0, fmt.Errorf("unknown SSR message type: %d", msg.Type)
 	}
@@ -238,6 +274,11 @@ func decodeSSROrbitClockCorrection(msg *RTCMMessage) (*SSROrbitClockCorrection, 
 		return nil, fmt.Errorf("nil message")
 	}
 
+	// Validate message type
+	if !(msg.Type >= SSR_ORBIT_CLOCK_START && msg.Type <= SSR_ORBIT_CLOCK_END) {
+		return nil, fmt.Errorf("invalid SSR orbit/clock message type: %d", msg.Type)
+	}
+
 	// Decode SSR header
 	header, pos, err := decodeSSRHeader(msg)
 	if err != nil {
@@ -251,24 +292,41 @@ func decodeSSROrbitClockCorrection(msg *RTCMMessage) (*SSROrbitClockCorrection, 
 		ClockCorrections: make([]SSRClockCorrection, header.NumSatellites),
 	}
 
-	// Decode orbit corrections
-	for i := 0; i < header.NumSatellites; i++ {
-		orb, newPos, err := decodeSSROrbitCorrection(msg, pos)
-		if err != nil {
-			return nil, err
+	// Determine if this is an orbit-only, clock-only, or combined message
+	isOrbitMsg := msg.Type == 1057 || msg.Type == 1058 || msg.Type == 1059 ||
+		msg.Type == 1060 || msg.Type == 1061 || msg.Type == 1062
+	isClockMsg := msg.Type == 1058 || msg.Type == 1060 || msg.Type == 1061 || msg.Type == 1062
+
+	// Decode orbit corrections if this is an orbit message
+	if isOrbitMsg {
+		for i := 0; i < header.NumSatellites; i++ {
+			orb, newPos, err := decodeSSROrbitCorrection(msg, pos)
+			if err != nil {
+				return nil, fmt.Errorf("failed to decode orbit correction for satellite %d: %w", i+1, err)
+			}
+			correction.OrbitCorrections[i] = *orb
+			pos = newPos
 		}
-		correction.OrbitCorrections[i] = *orb
-		pos = newPos
 	}
 
-	// Decode clock corrections
-	for i := 0; i < header.NumSatellites; i++ {
-		clk, newPos, err := decodeSSRClockCorrection(msg, pos)
-		if err != nil {
-			return nil, err
+	// Decode clock corrections if this is a clock message
+	if isClockMsg {
+		for i := 0; i < header.NumSatellites; i++ {
+			clk, newPos, err := decodeSSRClockCorrection(msg, pos)
+			if err != nil {
+				return nil, fmt.Errorf("failed to decode clock correction for satellite %d: %w", i+1, err)
+			}
+			correction.ClockCorrections[i] = *clk
+			pos = newPos
 		}
-		correction.ClockCorrections[i] = *clk
-		pos = newPos
+	}
+
+	// Validate that we've read all the data
+	if pos != msg.Length*8 {
+		// This is just a warning, not an error, as there might be padding bits
+		// or reserved fields at the end of the message
+		// fmt.Printf("Warning: Not all data read from SSR message type %d. Read %d bits, message length %d bits\n",
+		//           msg.Type, pos, msg.Length*8)
 	}
 
 	return correction, nil
@@ -278,6 +336,11 @@ func decodeSSROrbitClockCorrection(msg *RTCMMessage) (*SSROrbitClockCorrection, 
 func decodeSSRCodeBias(msg *RTCMMessage) (*SSRCodeBiasCorrection, error) {
 	if msg == nil {
 		return nil, fmt.Errorf("nil message")
+	}
+
+	// Validate message type
+	if !(msg.Type >= SSR_CODE_BIAS_START && msg.Type <= SSR_CODE_BIAS_END) {
+		return nil, fmt.Errorf("invalid SSR code bias message type: %d", msg.Type)
 	}
 
 	// Decode SSR header
@@ -298,9 +361,19 @@ func decodeSSRCodeBias(msg *RTCMMessage) (*SSRCodeBiasCorrection, error) {
 		satID := uint8(gnssgo.GetBitU(msg.Data, pos, 6))
 		pos += 6
 
+		// Validate satellite ID
+		if satID == 0 || satID > 64 {
+			return nil, fmt.Errorf("invalid satellite ID: %d", satID)
+		}
+
 		// Decode number of biases
 		numBiases := int(gnssgo.GetBitU(msg.Data, pos, 5))
 		pos += 5
+
+		// Validate number of biases
+		if numBiases <= 0 {
+			return nil, fmt.Errorf("invalid number of biases: %d", numBiases)
+		}
 
 		// Create code bias
 		bias := &SSRCodeBias{
@@ -324,6 +397,14 @@ func decodeSSRCodeBias(msg *RTCMMessage) (*SSRCodeBiasCorrection, error) {
 		correction.CodeBiases[i] = *bias
 	}
 
+	// Validate that we've read all the data
+	if pos != msg.Length*8 {
+		// This is just a warning, not an error, as there might be padding bits
+		// or reserved fields at the end of the message
+		// fmt.Printf("Warning: Not all data read from SSR message type %d. Read %d bits, message length %d bits\n",
+		//           msg.Type, pos, msg.Length*8)
+	}
+
 	return correction, nil
 }
 
@@ -331,6 +412,11 @@ func decodeSSRCodeBias(msg *RTCMMessage) (*SSRCodeBiasCorrection, error) {
 func decodeSSRPhaseBias(msg *RTCMMessage) (*SSRPhaseBiasCorrection, error) {
 	if msg == nil {
 		return nil, fmt.Errorf("nil message")
+	}
+
+	// Validate message type
+	if !(msg.Type >= SSR_PHASE_BIAS_START && msg.Type <= SSR_PHASE_BIAS_END) {
+		return nil, fmt.Errorf("invalid SSR phase bias message type: %d", msg.Type)
 	}
 
 	// Decode SSR header
@@ -351,9 +437,19 @@ func decodeSSRPhaseBias(msg *RTCMMessage) (*SSRPhaseBiasCorrection, error) {
 		satID := uint8(gnssgo.GetBitU(msg.Data, pos, 6))
 		pos += 6
 
+		// Validate satellite ID
+		if satID == 0 || satID > 64 {
+			return nil, fmt.Errorf("invalid satellite ID: %d", satID)
+		}
+
 		// Decode number of biases
 		numBiases := int(gnssgo.GetBitU(msg.Data, pos, 5))
 		pos += 5
+
+		// Validate number of biases
+		if numBiases <= 0 {
+			return nil, fmt.Errorf("invalid number of biases: %d", numBiases)
+		}
 
 		// Decode yaw angle
 		yawAngle := float64(gnssgo.GetBitU(msg.Data, pos, 9)) * 1.0 * math.Pi / 180.0 // 1 degree to rad
@@ -401,6 +497,14 @@ func decodeSSRPhaseBias(msg *RTCMMessage) (*SSRPhaseBiasCorrection, error) {
 		}
 
 		correction.PhaseBiases[i] = *bias
+	}
+
+	// Validate that we've read all the data
+	if pos != msg.Length*8 {
+		// This is just a warning, not an error, as there might be padding bits
+		// or reserved fields at the end of the message
+		// fmt.Printf("Warning: Not all data read from SSR message type %d. Read %d bits, message length %d bits\n",
+		//           msg.Type, pos, msg.Length*8)
 	}
 
 	return correction, nil
