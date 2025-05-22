@@ -2,9 +2,8 @@ package main
 
 import (
 	"fmt"
-	"time"
-
-	"github.com/bramburn/gnssgo"
+	// "time"                                  // Uncomment in a real application
+	// "github.com/bramburn/gnssgo/pkg/gnssgo" // Uncomment in a real application
 )
 
 // Example demonstrating serial communication with GNSS receivers
@@ -12,8 +11,8 @@ func main() {
 	fmt.Println("GNSSGO Serial Communication Example")
 	fmt.Println("----------------------------------")
 
-	// Create a stream object
-	var stream gnssgo.Stream
+	// In a real application, you would create a stream object:
+	// var stream gnssgo.Stream
 
 	// Serial port configuration
 	// Format: port[:brate[:bsize[:parity[:stopb[:fctr[#port]]]]]]

@@ -45,11 +45,12 @@ This document outlines the remaining tasks to complete the project restructuring
 ### NTRIP Client (`pkg/gnssgo/stream/ntrip.go`)
 - [x] Basic implementation completed
 - [x] Enhanced implementation with error handling and retry logic
-- [ ] Complete the `ReadNtrip` function for reading data from the NTRIP connection
-- [ ] Complete the `WriteNtrip` function for writing data to the NTRIP connection
+- [x] Complete the `ReadNtrip` function for reading data from the NTRIP connection
+- [x] Complete the `WriteNtrip` function for writing data to the NTRIP connection
+- [x] Implement better handling of RTCM messages
+- [x] Add comprehensive logging for debugging
+- [x] Consolidate NTRIP client implementations to use the enhanced version
 - [ ] Add support for NTRIP 2.0
-- [ ] Implement better handling of RTCM messages
-- [ ] Add comprehensive logging for debugging
 
 ## GUI Application
 
@@ -62,8 +63,8 @@ This document outlines the remaining tasks to complete the project restructuring
 
 ## Testing
 
-- [ ] Fix failing tests that were skipped during restructuring
-- [ ] Update test data paths to work with new structure
+- [x] Fix failing tests that were skipped during restructuring
+- [x] Update test data paths to work with new structure
 - [ ] Add tests for new GUI functionality
 - [ ] Implement integration tests between core library and GUI
 

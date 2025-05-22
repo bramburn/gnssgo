@@ -181,3 +181,80 @@ func TimeAdd(t Gtime, sec float64) Gtime {
 
 	return tt
 }
+
+// Time2Epoch converts Gtime to epoch (year, month, day, hour, minute, second)
+func Time2Epoch(t Gtime, ep *[6]float64) {
+	var days, sec, mon, day int
+
+	// Convert time to calendar day/time
+	days = int(t.Time / 86400)
+	sec = int(t.Time - int64(days)*86400)
+
+	// Year and day of year
+	(*ep)[0] = 1970.0
+	(*ep)[1] = 1.0
+	(*ep)[2] = 1.0 + float64(days)
+	(*ep)[3] = 0.0
+	(*ep)[4] = 0.0
+	(*ep)[5] = float64(sec) + t.Sec
+
+	// Year
+	for (*ep)[2] > 366.0 {
+		if isLeapYear(int((*ep)[0])) {
+			if (*ep)[2] > 366.0 {
+				(*ep)[2] -= 366.0
+				(*ep)[0]++
+			}
+		} else {
+			(*ep)[2] -= 365.0
+			(*ep)[0]++
+		}
+	}
+
+	// Month and day
+	mon = 1
+	day = int((*ep)[2])
+	for i := 1; i <= 12; i++ {
+		if i == 2 && isLeapYear(int((*ep)[0])) {
+			if day > 29 {
+				day -= 29
+			} else {
+				mon = i
+				break
+			}
+		} else {
+			daysInMonth := [12]int{31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
+			if day > daysInMonth[i-1] {
+				day -= daysInMonth[i-1]
+			} else {
+				mon = i
+				break
+			}
+		}
+	}
+
+	(*ep)[1] = float64(mon)
+	(*ep)[2] = float64(day)
+	(*ep)[3] = float64(int((*ep)[5]) / 3600)
+	(*ep)[4] = float64(int((*ep)[5]) % 3600 / 60)
+	(*ep)[5] = float64(int((*ep)[5])%60) + (*ep)[5] - float64(int((*ep)[5]))
+}
+
+// Time2Doy converts Gtime to day of year
+func Time2Doy(t Gtime) int {
+	var ep [6]float64
+	Time2Epoch(t, &ep)
+
+	doy := 0
+	for i := 1; i < int(ep[1]); i++ {
+		doy += DaysInMonth(int(ep[0]), i)
+	}
+	doy += int(ep[2])
+
+	return doy
+}
+
+// isLeapYear checks if a year is a leap year
+func isLeapYear(year int) bool {
+	return (year%4 == 0 && year%100 != 0) || year%400 == 0
+}

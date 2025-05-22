@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/bramburn/gnssgo"
+	"github.com/bramburn/gnssgo/pkg/gnssgo"
 )
 
 // Basic example showing how to use the GNSSGO library
@@ -13,7 +13,8 @@ func main() {
 
 	// Create a time object
 	var time gnssgo.Gtime
-	time = gnssgo.Epoch2Time(2023, 1, 1, 0, 0, 0)
+	var ep [6]float64 = [6]float64{2023, 1, 1, 0, 0, 0}
+	time = gnssgo.Epoch2Time(ep[:])
 
 	// Convert time to string
 	var timeStr string

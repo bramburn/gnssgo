@@ -2,20 +2,14 @@ package main
 
 import (
 	"fmt"
-
-	"github.com/bramburn/gnssgo"
 )
 
 // Example demonstrating RINEX file handling with GNSSGO
 func main() {
-	// Initialize navigation data structure
-	var nav gnssgo.Nav
-
-	// Initialize observation data structure
-	var obs gnssgo.Obs
-
-	// Initialize station information
-	var sta gnssgo.Sta
+	// In a real application, you would initialize these structures:
+	// var nav gnssgo.Nav       // Navigation data structure
+	// var obs gnssgo.Obs       // Observation data structure
+	// var sta gnssgo.Sta       // Station information
 
 	fmt.Println("GNSSGO RINEX File Handling Example")
 	fmt.Println("----------------------------------")

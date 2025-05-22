@@ -2,6 +2,7 @@
 package stream
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -14,6 +15,35 @@ import (
 	"sync"
 	"time"
 )
+
+// ntripRegistry is a registry for mapping between legacy NTrip and enhanced EnhancedNTrip instances
+var ntripRegistry = struct {
+	sync.RWMutex
+	registry map[*NTrip]*EnhancedNTrip
+}{
+	registry: make(map[*NTrip]*EnhancedNTrip),
+}
+
+// RegisterEnhancedNTrip registers an enhanced NTRIP instance with a legacy NTRIP instance
+func RegisterEnhancedNTrip(ntrip *NTrip, enhancedNtrip *EnhancedNTrip) {
+	ntripRegistry.Lock()
+	defer ntripRegistry.Unlock()
+	ntripRegistry.registry[ntrip] = enhancedNtrip
+}
+
+// GetEnhancedNTripFromRegistry returns the enhanced NTRIP instance for a legacy NTRIP instance
+func GetEnhancedNTripFromRegistry(ntrip *NTrip) *EnhancedNTrip {
+	ntripRegistry.RLock()
+	defer ntripRegistry.RUnlock()
+	return ntripRegistry.registry[ntrip]
+}
+
+// UnregisterEnhancedNTrip removes an enhanced NTRIP instance from the registry
+func UnregisterEnhancedNTrip(ntrip *NTrip) {
+	ntripRegistry.Lock()
+	defer ntripRegistry.Unlock()
+	delete(ntripRegistry.registry, ntrip)
+}
 
 // NTRIP-specific constants
 const (
@@ -506,12 +536,18 @@ func OpenEnhancedNtrip(path string, ctype int, msg *string) *NTrip {
 
 	// Create a legacy NTrip object for compatibility
 	ntrip := &NTrip{
-		state: enhancedNtrip.state,
-		ctype: enhancedNtrip.ctype,
-		url:   enhancedNtrip.url,
-		buff:  enhancedNtrip.buff,
-		tcp:   enhancedNtrip.tcp,
+		state:  enhancedNtrip.state,
+		ctype:  enhancedNtrip.ctype,
+		url:    enhancedNtrip.url,
+		buff:   enhancedNtrip.buff,
+		tcp:    enhancedNtrip.tcp,
+		mntpnt: config.Mountpoint,
+		user:   config.Username,
+		passwd: config.Password,
 	}
+
+	// Register the enhanced NTRIP instance with the legacy NTRIP instance
+	RegisterEnhancedNTrip(ntrip, enhancedNtrip)
 
 	return ntrip
 }
@@ -546,8 +582,52 @@ func (ntrip *EnhancedNTrip) ReadNtrip(buff []byte, n int, msg *string) int {
 		return 0
 	}
 
-	// TODO: Implement reading from the buffer
-	return 0
+	// Create a context with timeout for this read operation
+	ctx, cancel := context.WithTimeout(ntrip.ctx, 500*time.Millisecond)
+	defer cancel()
+
+	// If we have a TCP client, use it directly
+	if ntrip.tcp != nil {
+		return ntrip.tcp.ReadTcpClient(buff, n, msg)
+	}
+
+	// Otherwise, get data from the message buffer
+	messages := ntrip.messageBuffer.GetAll()
+	if len(messages) == 0 {
+		// Try to read from the HTTP response if available
+		select {
+		case <-ctx.Done():
+			// Timeout or cancelled
+			if msg != nil {
+				*msg = "Read timeout"
+			}
+			return 0
+		default:
+			// No data available yet
+			if msg != nil {
+				*msg = "No data available"
+			}
+			return 0
+		}
+	}
+
+	// Use the most recent message
+	latestMsg := messages[len(messages)-1]
+
+	// Copy data to the output buffer
+	bytesToCopy := len(latestMsg)
+	if bytesToCopy > n {
+		bytesToCopy = n
+	}
+
+	copy(buff, latestMsg[:bytesToCopy])
+
+	// Log the read operation if debug is enabled
+	if ntrip.config.Debug {
+		Tracet(4, "ReadNtrip: read %d bytes\n", bytesToCopy)
+	}
+
+	return bytesToCopy
 }
 
 // WriteNtrip writes data to an NTRIP connection
@@ -563,8 +643,92 @@ func (ntrip *EnhancedNTrip) WriteNtrip(buff []byte, n int, msg *string) int {
 		return 0
 	}
 
-	// TODO: Implement writing to the connection
-	return 0
+	// Create a context with timeout for this write operation
+	ctx, cancel := context.WithTimeout(ntrip.ctx, 5*time.Second)
+	defer cancel()
+
+	// If we have a TCP client, use it directly
+	if ntrip.tcp != nil {
+		// Write data to the TCP connection
+		bytesWritten := ntrip.tcp.WriteTcpClient(buff, n, msg)
+		if bytesWritten <= 0 {
+			if msg != nil && *msg == "" {
+				*msg = "Failed to write data to TCP connection"
+			}
+			return 0
+		}
+
+		// Log the write operation if debug is enabled
+		if ntrip.config.Debug {
+			Tracet(4, "WriteNtrip: sent %d bytes\n", bytesWritten)
+		}
+
+		return bytesWritten
+	}
+
+	// Check if the data is a NMEA GGA message
+	isGGA := false
+	if n > 6 && string(buff[:6]) == "$GPGGA" {
+		isGGA = true
+	}
+
+	// For HTTP-based NTRIP connections, we need to send a POST request
+	// This is typically used for position reporting (GGA messages) in NTRIP clients
+	// or for sending data to an NTRIP server
+
+	// Create a new HTTP request for sending data
+	var req *http.Request
+	var err error
+
+	// Construct the URL
+	url := fmt.Sprintf("http://%s:%d/%s", ntrip.config.Server, ntrip.config.Port, ntrip.config.Mountpoint)
+
+	// Create a POST request with the data
+	req, err = http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(buff[:n]))
+	if err != nil {
+		if msg != nil {
+			*msg = fmt.Sprintf("Failed to create POST request: %v", err)
+		}
+		return 0
+	}
+
+	// Set headers for NTRIP
+	req.Header.Set("User-Agent", ntrip.config.UserAgent)
+	req.Header.Set("Content-Type", "text/plain")
+
+	// Set basic auth if credentials are provided
+	if ntrip.config.Username != "" {
+		req.SetBasicAuth(ntrip.config.Username, ntrip.config.Password)
+	}
+
+	// Send the request
+	resp, err := ntrip.client.Do(req)
+	if err != nil {
+		if msg != nil {
+			*msg = fmt.Sprintf("Failed to send data: %v", err)
+		}
+		return 0
+	}
+	defer resp.Body.Close()
+
+	// Check the response status
+	if resp.StatusCode != http.StatusOK {
+		if msg != nil {
+			*msg = fmt.Sprintf("Server returned status %d", resp.StatusCode)
+		}
+		return 0
+	}
+
+	// Log the write operation if debug is enabled
+	if ntrip.config.Debug {
+		if isGGA {
+			Tracet(4, "WriteNtrip: sent GGA message (%d bytes)\n", n)
+		} else {
+			Tracet(4, "WriteNtrip: sent data (%d bytes)\n", n)
+		}
+	}
+
+	return n
 }
 
 // GetMessageStats returns statistics for all RTCM messages
@@ -620,4 +784,31 @@ func (ntrip *EnhancedNTrip) SetDebug(debug bool) {
 	defer ntrip.mutex.Unlock()
 
 	ntrip.config.Debug = debug
+}
+
+// Close closes the NTRIP connection
+func (ntrip *EnhancedNTrip) Close() {
+	ntrip.mutex.Lock()
+	defer ntrip.mutex.Unlock()
+
+	// Cancel the context to stop any ongoing operations
+	if ntrip.cancel != nil {
+		ntrip.cancel()
+	}
+
+	// Close the TCP connection if it exists
+	if ntrip.tcp != nil {
+		ntrip.tcp.CloseTcpClient()
+	}
+
+	// Reset the state
+	ntrip.state = 0
+
+	// Remove from registry if it's registered
+	for k, v := range ntripRegistry.registry {
+		if v == ntrip {
+			UnregisterEnhancedNTrip(k)
+			break
+		}
+	}
 }

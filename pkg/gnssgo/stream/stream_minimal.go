@@ -150,10 +150,54 @@ func GenHex(cmd string, buff []byte) int {
 // TcpClient methods are implemented in tcp.go
 
 // NTrip methods
-func (ntrip *NTrip) CloseNtrip()                                       {}
-func (ntrip *NTrip) ReadNtrip(buff []byte, size int, msg *string) int  { return 0 }
-func (ntrip *NTrip) WriteNtrip(buff []byte, size int, msg *string) int { return 0 }
-func (ntrip *NTrip) StatExNtrip(msg *string) int                       { return 0 }
+func (ntrip *NTrip) CloseNtrip() {
+	// Get the enhanced implementation from the registry
+	if enhancedNtrip := GetEnhancedNTripFromRegistry(ntrip); enhancedNtrip != nil {
+		enhancedNtrip.Close()
+	} else if ntrip.tcp != nil {
+		ntrip.tcp.CloseTcpClient()
+	}
+}
+
+func (ntrip *NTrip) ReadNtrip(buff []byte, size int, msg *string) int {
+	// Get the enhanced implementation from the registry
+	if enhancedNtrip := GetEnhancedNTripFromRegistry(ntrip); enhancedNtrip != nil {
+		return enhancedNtrip.ReadNtrip(buff, size, msg)
+	} else if ntrip.tcp != nil {
+		// Fall back to the legacy implementation
+		if ntrip.nb > 0 { // read response buffer first
+			nb := size
+			if ntrip.nb <= size {
+				nb = ntrip.nb
+			}
+			copy(buff, []byte(ntrip.buff)[ntrip.nb-nb:ntrip.nb])
+			ntrip.nb = 0
+			ntrip.buff = ""
+			return nb
+		}
+		return ntrip.tcp.ReadTcpClient(buff, size, msg)
+	}
+	return 0
+}
+
+func (ntrip *NTrip) WriteNtrip(buff []byte, size int, msg *string) int {
+	// Get the enhanced implementation from the registry
+	if enhancedNtrip := GetEnhancedNTripFromRegistry(ntrip); enhancedNtrip != nil {
+		return enhancedNtrip.WriteNtrip(buff, size, msg)
+	} else if ntrip.tcp != nil {
+		// Fall back to the legacy implementation
+		return ntrip.tcp.WriteTcpClient(buff, size, msg)
+	}
+	return 0
+}
+
+func (ntrip *NTrip) StatExNtrip(msg *string) int {
+	// Get the enhanced implementation from the registry
+	if enhancedNtrip := GetEnhancedNTripFromRegistry(ntrip); enhancedNtrip != nil {
+		return enhancedNtrip.GetState()
+	}
+	return ntrip.state
+}
 
 // NTripc methods
 func (ntripc *NTripc) CloseNtripc()                                       {}
