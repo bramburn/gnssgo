@@ -370,6 +370,339 @@ func decodeGLONASSEphemeris(msg *RTCMMessage) (*GLONASSEphemeris, error) {
 	return eph, nil
 }
 
+// GalileoEphemeris represents Galileo ephemeris data from RTCM message 1046
+type GalileoEphemeris struct {
+	SatID           uint8   // Satellite ID
+	Week            uint16  // Galileo week number
+	IODNav          uint16  // Issue of data navigation
+	SvHealth        uint8   // SV health
+	BGD_E1E5a       float64 // E1-E5a Broadcast Group Delay (s)
+	BGD_E1E5b       float64 // E1-E5b Broadcast Group Delay (s)
+	E5aHS           uint8   // E5a Health Status
+	E5bHS           uint8   // E5b Health Status
+	E1BHS           uint8   // E1-B Health Status
+	E5aDataValidity bool    // E5a Data Validity Status
+	E5bDataValidity bool    // E5b Data Validity Status
+	E1BDataValidity bool    // E1-B Data Validity Status
+	Toc             uint32  // Clock data reference time (s)
+	Af0             float64 // Clock correction polynomial coefficient (s)
+	Af1             float64 // Clock correction polynomial coefficient (s/s)
+	Af2             float64 // Clock correction polynomial coefficient (s/s²)
+	Crs             float64 // Amplitude of sine harmonic correction term to orbit radius (m)
+	DeltaN          float64 // Mean motion difference from computed value (rad/s)
+	M0              float64 // Mean anomaly at reference time (rad)
+	Cuc             float64 // Amplitude of cosine harmonic correction term to argument of latitude (rad)
+	Eccentricity    float64 // Eccentricity
+	Cus             float64 // Amplitude of sine harmonic correction term to argument of latitude (rad)
+	SqrtA           float64 // Square root of semi-major axis (m^(1/2))
+	Toe             uint32  // Ephemeris reference time (s)
+	Cic             float64 // Amplitude of cosine harmonic correction term to inclination angle (rad)
+	Omega0          float64 // Longitude of ascending node of orbit plane at weekly epoch (rad)
+	Cis             float64 // Amplitude of sine harmonic correction term to inclination angle (rad)
+	Inclination     float64 // Inclination angle at reference time (rad)
+	Crc             float64 // Amplitude of cosine harmonic correction term to orbit radius (m)
+	Omega           float64 // Argument of perigee (rad)
+	OmegaDot        float64 // Rate of right ascension (rad/s)
+	IDOT            float64 // Rate of inclination angle (rad/s)
+}
+
+// BeiDouEphemeris represents BeiDou ephemeris data from RTCM message 1042
+type BeiDouEphemeris struct {
+	SatID        uint8   // Satellite ID
+	Week         uint16  // BeiDou week number
+	SvHealth     uint8   // SV health
+	AODE         uint8   // Age of data, ephemeris
+	AODC         uint8   // Age of data, clock
+	Toc          uint32  // Clock data reference time (s)
+	Af0          float64 // Clock correction polynomial coefficient (s)
+	Af1          float64 // Clock correction polynomial coefficient (s/s)
+	Af2          float64 // Clock correction polynomial coefficient (s/s²)
+	Crs          float64 // Amplitude of sine harmonic correction term to orbit radius (m)
+	DeltaN       float64 // Mean motion difference from computed value (rad/s)
+	M0           float64 // Mean anomaly at reference time (rad)
+	Cuc          float64 // Amplitude of cosine harmonic correction term to argument of latitude (rad)
+	Eccentricity float64 // Eccentricity
+	Cus          float64 // Amplitude of sine harmonic correction term to argument of latitude (rad)
+	SqrtA        float64 // Square root of semi-major axis (m^(1/2))
+	Toe          uint32  // Ephemeris reference time (s)
+	Cic          float64 // Amplitude of cosine harmonic correction term to inclination angle (rad)
+	Omega0       float64 // Longitude of ascending node of orbit plane at weekly epoch (rad)
+	Cis          float64 // Amplitude of sine harmonic correction term to inclination angle (rad)
+	Inclination  float64 // Inclination angle at reference time (rad)
+	Crc          float64 // Amplitude of cosine harmonic correction term to orbit radius (m)
+	Omega        float64 // Argument of perigee (rad)
+	OmegaDot     float64 // Rate of right ascension (rad/s)
+	IDOT         float64 // Rate of inclination angle (rad/s)
+	TGD1         float64 // B1 TGD (s)
+	TGD2         float64 // B2 TGD (s)
+}
+
+// decodeGalileoEphemeris decodes RTCM message 1046 (Galileo Ephemeris)
+func decodeGalileoEphemeris(msg *RTCMMessage) (*GalileoEphemeris, error) {
+	if msg == nil || msg.Type != RTCM_GALILEO_EPHEMERIS {
+		return nil, fmt.Errorf("not a Galileo ephemeris message")
+	}
+
+	if len(msg.Data) < 15 {
+		return nil, fmt.Errorf("message too short for Galileo ephemeris")
+	}
+
+	// Start position after message type and station ID (24 + 12 = 36 bits)
+	pos := 36
+
+	// Create Galileo ephemeris
+	eph := &GalileoEphemeris{}
+
+	// Decode satellite ID
+	eph.SatID = uint8(gnssgo.GetBitU(msg.Data, pos, 6))
+	pos += 6
+
+	// Decode week number
+	eph.Week = uint16(gnssgo.GetBitU(msg.Data, pos, 12))
+	pos += 12
+
+	// Decode IODNav
+	eph.IODNav = uint16(gnssgo.GetBitU(msg.Data, pos, 10))
+	pos += 10
+
+	// Decode SV health
+	eph.SvHealth = uint8(gnssgo.GetBitU(msg.Data, pos, 8))
+	pos += 8
+
+	// Decode BGD_E1E5a
+	eph.BGD_E1E5a = float64(gnssgo.GetBits(msg.Data, pos, 10)) * math.Pow(2, -32)
+	pos += 10
+
+	// Decode BGD_E1E5b
+	eph.BGD_E1E5b = float64(gnssgo.GetBits(msg.Data, pos, 10)) * math.Pow(2, -32)
+	pos += 10
+
+	// Decode E5a/E5b/E1B Health Status
+	eph.E5aHS = uint8(gnssgo.GetBitU(msg.Data, pos, 2))
+	pos += 2
+	eph.E5bHS = uint8(gnssgo.GetBitU(msg.Data, pos, 2))
+	pos += 2
+	eph.E1BHS = uint8(gnssgo.GetBitU(msg.Data, pos, 2))
+	pos += 2
+
+	// Decode E5a/E5b/E1B Data Validity Status
+	eph.E5aDataValidity = gnssgo.GetBitU(msg.Data, pos, 1) != 0
+	pos += 1
+	eph.E5bDataValidity = gnssgo.GetBitU(msg.Data, pos, 1) != 0
+	pos += 1
+	eph.E1BDataValidity = gnssgo.GetBitU(msg.Data, pos, 1) != 0
+	pos += 1
+
+	// Decode Toc
+	eph.Toc = uint32(gnssgo.GetBitU(msg.Data, pos, 14)) * 60
+	pos += 14
+
+	// Decode Af0
+	eph.Af0 = float64(gnssgo.GetBits(msg.Data, pos, 31)) * math.Pow(2, -34)
+	pos += 31
+
+	// Decode Af1
+	eph.Af1 = float64(gnssgo.GetBits(msg.Data, pos, 21)) * math.Pow(2, -46)
+	pos += 21
+
+	// Decode Af2
+	eph.Af2 = float64(gnssgo.GetBits(msg.Data, pos, 6)) * math.Pow(2, -59)
+	pos += 6
+
+	// Decode Crs
+	eph.Crs = float64(gnssgo.GetBits(msg.Data, pos, 16)) * math.Pow(2, -5)
+	pos += 16
+
+	// Decode DeltaN
+	eph.DeltaN = float64(gnssgo.GetBits(msg.Data, pos, 16)) * math.Pow(2, -43) * math.Pi
+	pos += 16
+
+	// Decode M0
+	eph.M0 = float64(gnssgo.GetBits(msg.Data, pos, 32)) * math.Pow(2, -31) * math.Pi
+	pos += 32
+
+	// Decode Cuc
+	eph.Cuc = float64(gnssgo.GetBits(msg.Data, pos, 16)) * math.Pow(2, -29)
+	pos += 16
+
+	// Decode Eccentricity
+	eph.Eccentricity = float64(gnssgo.GetBitU(msg.Data, pos, 32)) * math.Pow(2, -33)
+	pos += 32
+
+	// Decode Cus
+	eph.Cus = float64(gnssgo.GetBits(msg.Data, pos, 16)) * math.Pow(2, -29)
+	pos += 16
+
+	// Decode SqrtA
+	eph.SqrtA = float64(gnssgo.GetBitU(msg.Data, pos, 32)) * math.Pow(2, -19)
+	pos += 32
+
+	// Decode Toe
+	eph.Toe = uint32(gnssgo.GetBitU(msg.Data, pos, 14)) * 60
+	pos += 14
+
+	// Decode Cic
+	eph.Cic = float64(gnssgo.GetBits(msg.Data, pos, 16)) * math.Pow(2, -29)
+	pos += 16
+
+	// Decode Omega0
+	eph.Omega0 = float64(gnssgo.GetBits(msg.Data, pos, 32)) * math.Pow(2, -31) * math.Pi
+	pos += 32
+
+	// Decode Cis
+	eph.Cis = float64(gnssgo.GetBits(msg.Data, pos, 16)) * math.Pow(2, -29)
+	pos += 16
+
+	// Decode Inclination
+	eph.Inclination = float64(gnssgo.GetBits(msg.Data, pos, 32)) * math.Pow(2, -31) * math.Pi
+	pos += 32
+
+	// Decode Crc
+	eph.Crc = float64(gnssgo.GetBits(msg.Data, pos, 16)) * math.Pow(2, -5)
+	pos += 16
+
+	// Decode Omega
+	eph.Omega = float64(gnssgo.GetBits(msg.Data, pos, 32)) * math.Pow(2, -31) * math.Pi
+	pos += 32
+
+	// Decode OmegaDot
+	eph.OmegaDot = float64(gnssgo.GetBits(msg.Data, pos, 24)) * math.Pow(2, -43) * math.Pi
+	pos += 24
+
+	// Decode IDOT
+	eph.IDOT = float64(gnssgo.GetBits(msg.Data, pos, 14)) * math.Pow(2, -43) * math.Pi
+	pos += 14
+
+	return eph, nil
+}
+
+// decodeBeiDouEphemeris decodes RTCM message 1042 (BeiDou Ephemeris)
+func decodeBeiDouEphemeris(msg *RTCMMessage) (*BeiDouEphemeris, error) {
+	if msg == nil || msg.Type != RTCM_BEIDOU_EPHEMERIS {
+		return nil, fmt.Errorf("not a BeiDou ephemeris message")
+	}
+
+	if len(msg.Data) < 15 {
+		return nil, fmt.Errorf("message too short for BeiDou ephemeris")
+	}
+
+	// Start position after message type and station ID (24 + 12 = 36 bits)
+	pos := 36
+
+	// Create BeiDou ephemeris
+	eph := &BeiDouEphemeris{}
+
+	// Decode satellite ID
+	eph.SatID = uint8(gnssgo.GetBitU(msg.Data, pos, 6))
+	pos += 6
+
+	// Decode week number
+	eph.Week = uint16(gnssgo.GetBitU(msg.Data, pos, 13))
+	pos += 13
+
+	// Decode SV health
+	eph.SvHealth = uint8(gnssgo.GetBitU(msg.Data, pos, 9))
+	pos += 9
+
+	// Decode AODE
+	eph.AODE = uint8(gnssgo.GetBitU(msg.Data, pos, 5))
+	pos += 5
+
+	// Decode Toc
+	eph.Toc = uint32(gnssgo.GetBitU(msg.Data, pos, 17)) * 8
+	pos += 17
+
+	// Decode Af0
+	eph.Af0 = float64(gnssgo.GetBits(msg.Data, pos, 24)) * math.Pow(2, -33)
+	pos += 24
+
+	// Decode Af1
+	eph.Af1 = float64(gnssgo.GetBits(msg.Data, pos, 20)) * math.Pow(2, -50)
+	pos += 20
+
+	// Decode Af2
+	eph.Af2 = float64(gnssgo.GetBits(msg.Data, pos, 10)) * math.Pow(2, -66)
+	pos += 10
+
+	// Decode AODC
+	eph.AODC = uint8(gnssgo.GetBitU(msg.Data, pos, 5))
+	pos += 5
+
+	// Decode Crs
+	eph.Crs = float64(gnssgo.GetBits(msg.Data, pos, 18)) * math.Pow(2, -6)
+	pos += 18
+
+	// Decode DeltaN
+	eph.DeltaN = float64(gnssgo.GetBits(msg.Data, pos, 16)) * math.Pow(2, -43) * math.Pi
+	pos += 16
+
+	// Decode M0
+	eph.M0 = float64(gnssgo.GetBits(msg.Data, pos, 32)) * math.Pow(2, -31) * math.Pi
+	pos += 32
+
+	// Decode Cuc
+	eph.Cuc = float64(gnssgo.GetBits(msg.Data, pos, 18)) * math.Pow(2, -31)
+	pos += 18
+
+	// Decode Eccentricity
+	eph.Eccentricity = float64(gnssgo.GetBitU(msg.Data, pos, 32)) * math.Pow(2, -33)
+	pos += 32
+
+	// Decode Cus
+	eph.Cus = float64(gnssgo.GetBits(msg.Data, pos, 18)) * math.Pow(2, -31)
+	pos += 18
+
+	// Decode SqrtA
+	eph.SqrtA = float64(gnssgo.GetBitU(msg.Data, pos, 32)) * math.Pow(2, -19)
+	pos += 32
+
+	// Decode Toe
+	eph.Toe = uint32(gnssgo.GetBitU(msg.Data, pos, 17)) * 8
+	pos += 17
+
+	// Decode Cic
+	eph.Cic = float64(gnssgo.GetBits(msg.Data, pos, 18)) * math.Pow(2, -31)
+	pos += 18
+
+	// Decode Omega0
+	eph.Omega0 = float64(gnssgo.GetBits(msg.Data, pos, 32)) * math.Pow(2, -31) * math.Pi
+	pos += 32
+
+	// Decode Cis
+	eph.Cis = float64(gnssgo.GetBits(msg.Data, pos, 18)) * math.Pow(2, -31)
+	pos += 18
+
+	// Decode Inclination
+	eph.Inclination = float64(gnssgo.GetBits(msg.Data, pos, 32)) * math.Pow(2, -31) * math.Pi
+	pos += 32
+
+	// Decode Crc
+	eph.Crc = float64(gnssgo.GetBits(msg.Data, pos, 18)) * math.Pow(2, -6)
+	pos += 18
+
+	// Decode Omega
+	eph.Omega = float64(gnssgo.GetBits(msg.Data, pos, 32)) * math.Pow(2, -31) * math.Pi
+	pos += 32
+
+	// Decode OmegaDot
+	eph.OmegaDot = float64(gnssgo.GetBits(msg.Data, pos, 24)) * math.Pow(2, -43) * math.Pi
+	pos += 24
+
+	// Decode IDOT
+	eph.IDOT = float64(gnssgo.GetBits(msg.Data, pos, 14)) * math.Pow(2, -43) * math.Pi
+	pos += 14
+
+	// Decode TGD1
+	eph.TGD1 = float64(gnssgo.GetBits(msg.Data, pos, 10)) * math.Pow(2, -31)
+	pos += 10
+
+	// Decode TGD2
+	eph.TGD2 = float64(gnssgo.GetBits(msg.Data, pos, 10)) * math.Pow(2, -31)
+	pos += 10
+
+	return eph, nil
+}
+
 // decodeSSROrbitClock decodes RTCM messages 1057-1062 (SSR Orbit and Clock Corrections)
 func decodeSSROrbitClock(msg *RTCMMessage) (interface{}, error) {
 	// Use the implementation from ssr.go

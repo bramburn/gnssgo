@@ -2,7 +2,6 @@ package rtcm
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/bramburn/gnssgo/pkg/gnssgo"
 )
@@ -20,43 +19,43 @@ const (
 
 // MSMHeader represents the header of an MSM message
 type MSMHeader struct {
-	MessageType    int       // Message type
-	StationID      uint16    // Reference station ID
-	GNSSID         int       // GNSS ID (0:GPS, 1:GLONASS, 2:Galileo, 3:SBAS, 4:QZSS, 5:BeiDou, 6:IRNSS)
-	Epoch          uint32    // GNSS epoch time
-	MultipleMessage bool      // Multiple message bit
-	IssueOfDataStation uint8  // IODS
-	ClockSteeringIndicator uint8 // Clock steering indicator
-	ExternalClockIndicator uint8 // External clock indicator
-	SmoothingIndicator bool  // Divergence-free smoothing indicator
-	SmoothingInterval uint8  // Smoothing interval
-	SatelliteMask    uint64  // Satellite mask
-	SignalMask       uint32  // Signal mask
-	CellMask         []uint8 // Cell mask
-	NumSatellites    int     // Number of satellites
-	NumSignals       int     // Number of signals
-	NumCells         int     // Number of cells (satellite-signal combinations)
+	MessageType            int     // Message type
+	StationID              uint16  // Reference station ID
+	GNSSID                 int     // GNSS ID (0:GPS, 1:GLONASS, 2:Galileo, 3:SBAS, 4:QZSS, 5:BeiDou, 6:IRNSS)
+	Epoch                  uint32  // GNSS epoch time
+	MultipleMessage        bool    // Multiple message bit
+	IssueOfDataStation     uint8   // IODS
+	ClockSteeringIndicator uint8   // Clock steering indicator
+	ExternalClockIndicator uint8   // External clock indicator
+	SmoothingIndicator     bool    // Divergence-free smoothing indicator
+	SmoothingInterval      uint8   // Smoothing interval
+	SatelliteMask          uint64  // Satellite mask
+	SignalMask             uint32  // Signal mask
+	CellMask               []uint8 // Cell mask
+	NumSatellites          int     // Number of satellites
+	NumSignals             int     // Number of signals
+	NumCells               int     // Number of cells (satellite-signal combinations)
 }
 
 // MSMSatellite represents satellite data in an MSM message
 type MSMSatellite struct {
-	ID              int     // Satellite ID
-	RangeInteger    uint8   // Integer milliseconds of ranges
-	ExtendedInfo    uint8   // Extended satellite info
-	RangeModulo     float64 // Range modulo 1 millisecond (m)
-	PhaseRangeRate  float64 // Phase range rate (m/s)
+	ID             int     // Satellite ID
+	RangeInteger   uint8   // Integer milliseconds of ranges
+	ExtendedInfo   uint8   // Extended satellite info
+	RangeModulo    float64 // Range modulo 1 millisecond (m)
+	PhaseRangeRate float64 // Phase range rate (m/s)
 }
 
 // MSMSignal represents signal data in an MSM message
 type MSMSignal struct {
-	Type            int     // Signal type
-	Code            int     // Signal code
-	Pseudorange     float64 // Pseudorange (m)
-	PhaseRange      float64 // Phase range (cycles)
-	PhaseRangeLockTime uint16 // Lock time indicator
-	HalfCycleAmbiguity bool // Half-cycle ambiguity indicator
-	CNR             float64 // Carrier-to-noise ratio (dB-Hz)
-	PhaseRangeRate  float64 // Phase range rate (m/s)
+	Type               int     // Signal type
+	Code               int     // Signal code
+	Pseudorange        float64 // Pseudorange (m)
+	PhaseRange         float64 // Phase range (cycles)
+	PhaseRangeLockTime uint16  // Lock time indicator
+	HalfCycleAmbiguity bool    // Half-cycle ambiguity indicator
+	CNR                float64 // Carrier-to-noise ratio (dB-Hz)
+	PhaseRangeRate     float64 // Phase range rate (m/s)
 }
 
 // MSMData represents the decoded data from an MSM message
@@ -164,7 +163,9 @@ func decodeMSMHeader(msg *RTCMMessage, sys int) (*MSMHeader, int, error) {
 	pos += 3
 
 	// Decode satellite mask (up to 64 satellites)
-	header.SatelliteMask = gnssgo.GetBitU(msg.Data, pos, 64)
+	// We need to read this in two 32-bit chunks since GetBitU returns uint32
+	header.SatelliteMask = uint64(gnssgo.GetBitU(msg.Data, pos, 32)) |
+		(uint64(gnssgo.GetBitU(msg.Data, pos+32, 32)) << 32)
 	pos += 64
 
 	// Count number of satellites
@@ -195,7 +196,7 @@ func decodeMSMHeader(msg *RTCMMessage, sys int) (*MSMHeader, int, error) {
 // decodeMSMSatellites decodes satellite data from an MSM message
 func decodeMSMSatellites(msg *RTCMMessage, data *MSMData, pos int, msmType int) (int, error) {
 	header := &data.Header
-	
+
 	// For each satellite in the mask
 	satIndex := 0
 	for i := 0; i < 64; i++ {
@@ -273,7 +274,7 @@ func decodeMSMSatellites(msg *RTCMMessage, data *MSMData, pos int, msmType int) 
 // decodeMSMSignals decodes signal data from an MSM message
 func decodeMSMSignals(msg *RTCMMessage, data *MSMData, pos int, msmType int) (int, error) {
 	header := &data.Header
-	
+
 	// For each cell in the mask
 	cellIndex := 0
 	for i := 0; i < 64; i++ {
@@ -310,7 +311,7 @@ func decodeMSMSignals(msg *RTCMMessage, data *MSMData, pos int, msmType int) (in
 			cellBit := data.Cells[i]
 			satIdx := cellBit / header.NumSignals
 			satID := 0
-			
+
 			// Find satellite index
 			for j := 0; j < 64; j++ {
 				if (header.SatelliteMask & (1 << j)) != 0 {
@@ -321,7 +322,7 @@ func decodeMSMSignals(msg *RTCMMessage, data *MSMData, pos int, msmType int) (in
 					satIdx--
 				}
 			}
-			
+
 			// Get satellite data
 			var sat *MSMSatellite
 			for j := 0; j < header.NumSatellites; j++ {
@@ -330,21 +331,21 @@ func decodeMSMSignals(msg *RTCMMessage, data *MSMData, pos int, msmType int) (in
 					break
 				}
 			}
-			
+
 			if sat == nil {
 				continue
 			}
-			
+
 			// Decode pseudorange
 			signal := &data.Signals[i]
-			
+
 			switch msmType {
 			case MSM1, MSM3:
 				// 15-bit pseudorange (1 dm resolution)
 				pr := int32(gnssgo.GetBits(msg.Data, pos, 15))
 				if pr != -16384 { // Not invalid
-					signal.Pseudorange = float64(sat.RangeInteger)*299792.458 + 
-						sat.RangeModulo*299792.458 + 
+					signal.Pseudorange = float64(sat.RangeInteger)*299792.458 +
+						sat.RangeModulo*299792.458 +
 						float64(pr)*0.1
 				}
 				pos += 15
@@ -352,8 +353,8 @@ func decodeMSMSignals(msg *RTCMMessage, data *MSMData, pos int, msmType int) (in
 				// 20-bit pseudorange (1 cm resolution)
 				pr := int32(gnssgo.GetBits(msg.Data, pos, 20))
 				if pr != -524288 { // Not invalid
-					signal.Pseudorange = float64(sat.RangeInteger)*299792.458 + 
-						sat.RangeModulo*299792.458 + 
+					signal.Pseudorange = float64(sat.RangeInteger)*299792.458 +
+						sat.RangeModulo*299792.458 +
 						float64(pr)*0.01
 				}
 				pos += 20
@@ -361,8 +362,8 @@ func decodeMSMSignals(msg *RTCMMessage, data *MSMData, pos int, msmType int) (in
 				// 24-bit pseudorange (0.1 mm resolution)
 				pr := int32(gnssgo.GetBits(msg.Data, pos, 24))
 				if pr != -8388608 { // Not invalid
-					signal.Pseudorange = float64(sat.RangeInteger)*299792.458 + 
-						sat.RangeModulo*299792.458 + 
+					signal.Pseudorange = float64(sat.RangeInteger)*299792.458 +
+						sat.RangeModulo*299792.458 +
 						float64(pr)*0.0001
 				}
 				pos += 24
@@ -373,36 +374,138 @@ func decodeMSMSignals(msg *RTCMMessage, data *MSMData, pos int, msmType int) (in
 	// Decode phase ranges
 	if msmType == MSM2 || msmType == MSM3 || msmType == MSM4 || msmType == MSM5 || msmType == MSM6 || msmType == MSM7 {
 		for i := 0; i < header.NumCells; i++ {
-			// Similar to pseudorange decoding but for phase ranges
-			// Implementation details omitted for brevity
+			cellBit := data.Cells[i]
+			satIdx := cellBit / header.NumSignals
+			satID := 0
+
+			// Find satellite index
+			for j := 0; j < 64; j++ {
+				if (header.SatelliteMask & (1 << j)) != 0 {
+					if satIdx == 0 {
+						satID = j
+						break
+					}
+					satIdx--
+				}
+			}
+
+			// Get satellite data
+			var sat *MSMSatellite
+			for j := 0; j < header.NumSatellites; j++ {
+				if data.Satellites[j].ID == satID+1 {
+					sat = &data.Satellites[j]
+					break
+				}
+			}
+
+			if sat == nil {
+				continue
+			}
+
+			// Decode phase range
+			signal := &data.Signals[i]
+
+			switch msmType {
+			case MSM2, MSM3:
+				// 22-bit phase range (0.0001 cycles resolution)
+				phr := int32(gnssgo.GetBits(msg.Data, pos, 22))
+				if phr != -2097152 { // Not invalid
+					signal.PhaseRange = float64(sat.RangeInteger)*299792.458/gnssgo.CLIGHT +
+						sat.RangeModulo*299792.458/gnssgo.CLIGHT +
+						float64(phr)*0.0001
+				}
+				pos += 22
+			case MSM4, MSM5:
+				// 24-bit phase range (0.0001 cycles resolution)
+				phr := int32(gnssgo.GetBits(msg.Data, pos, 24))
+				if phr != -8388608 { // Not invalid
+					signal.PhaseRange = float64(sat.RangeInteger)*299792.458/gnssgo.CLIGHT +
+						sat.RangeModulo*299792.458/gnssgo.CLIGHT +
+						float64(phr)*0.0001
+				}
+				pos += 24
+			case MSM6, MSM7:
+				// 29-bit phase range (0.0000001 cycles resolution)
+				phr := int32(gnssgo.GetBits(msg.Data, pos, 29))
+				if phr != -268435456 { // Not invalid
+					signal.PhaseRange = float64(sat.RangeInteger)*299792.458/gnssgo.CLIGHT +
+						sat.RangeModulo*299792.458/gnssgo.CLIGHT +
+						float64(phr)*0.0000001
+				}
+				pos += 29
+			}
 		}
 	}
 
 	// Decode lock time indicators
 	if msmType == MSM2 || msmType == MSM3 || msmType == MSM4 || msmType == MSM5 || msmType == MSM6 || msmType == MSM7 {
 		for i := 0; i < header.NumCells; i++ {
-			// Implementation details omitted for brevity
+			signal := &data.Signals[i]
+
+			switch msmType {
+			case MSM2, MSM3, MSM4, MSM5:
+				// 4-bit lock time indicator
+				lock := uint16(gnssgo.GetBitU(msg.Data, pos, 4))
+				signal.PhaseRangeLockTime = lock
+				pos += 4
+			case MSM6, MSM7:
+				// 10-bit lock time indicator
+				lock := uint16(gnssgo.GetBitU(msg.Data, pos, 10))
+				signal.PhaseRangeLockTime = lock
+				pos += 10
+			}
 		}
 	}
 
 	// Decode half-cycle ambiguity indicators
 	if msmType == MSM2 || msmType == MSM3 || msmType == MSM4 || msmType == MSM5 || msmType == MSM6 || msmType == MSM7 {
 		for i := 0; i < header.NumCells; i++ {
-			// Implementation details omitted for brevity
+			signal := &data.Signals[i]
+
+			// 1-bit half-cycle ambiguity indicator
+			half := gnssgo.GetBitU(msg.Data, pos, 1) != 0
+			signal.HalfCycleAmbiguity = half
+			pos += 1
 		}
 	}
 
 	// Decode CNR
 	if msmType == MSM4 || msmType == MSM5 || msmType == MSM6 || msmType == MSM7 {
 		for i := 0; i < header.NumCells; i++ {
-			// Implementation details omitted for brevity
+			signal := &data.Signals[i]
+
+			switch msmType {
+			case MSM4, MSM5:
+				// 6-bit CNR (1 dB-Hz resolution)
+				cnr := uint8(gnssgo.GetBitU(msg.Data, pos, 6))
+				signal.CNR = float64(cnr)
+				pos += 6
+			case MSM6, MSM7:
+				// 10-bit CNR (0.0625 dB-Hz resolution)
+				cnr := uint16(gnssgo.GetBitU(msg.Data, pos, 10))
+				signal.CNR = float64(cnr) * 0.0625
+				pos += 10
+			}
 		}
 	}
 
 	// Decode phase range rates
 	if msmType == MSM5 || msmType == MSM7 {
 		for i := 0; i < header.NumCells; i++ {
-			// Implementation details omitted for brevity
+			signal := &data.Signals[i]
+
+			switch msmType {
+			case MSM5:
+				// 8-bit phase range rate (0.1 m/s resolution)
+				rate := int8(gnssgo.GetBits(msg.Data, pos, 8))
+				signal.PhaseRangeRate = float64(rate) * 0.1
+				pos += 8
+			case MSM7:
+				// 14-bit phase range rate (0.0001 m/s resolution)
+				rate := int16(gnssgo.GetBits(msg.Data, pos, 14))
+				signal.PhaseRangeRate = float64(rate) * 0.0001
+				pos += 14
+			}
 		}
 	}
 
@@ -456,8 +559,202 @@ func getGNSSIDFromSystem(sys int) int {
 }
 
 // getSignalCode returns the signal code for a given GNSS ID and signal ID
+// Based on RTCM 3.3 signal definitions
 func getSignalCode(gnssID, signalID int) int {
-	// Implementation depends on RTCM 3.3 signal definitions
-	// This is a simplified version
-	return signalID
+	// Signal codes based on RTCM 3.3 Table 3.5-91
+	switch gnssID {
+	case 0: // GPS
+		switch signalID {
+		case 0: // L1 C/A
+			return 1
+		case 1: // L1 P
+			return 2
+		case 2: // L1 Z-tracking
+			return 3
+		case 3: // L1C (1) - pilot component
+			return 4
+		case 4: // L1C (2) - data component
+			return 5
+		case 5: // L2 CM
+			return 6
+		case 6: // L2 CL
+			return 7
+		case 7: // L2 P
+			return 8
+		case 8: // L2 Z-tracking
+			return 9
+		case 9: // L5 I
+			return 10
+		case 10: // L5 Q
+			return 11
+		case 15: // L1 L-SAIF
+			return 16
+		default:
+			return 0
+		}
+	case 1: // GLONASS
+		switch signalID {
+		case 0: // G1 C/A
+			return 1
+		case 1: // G1 P
+			return 2
+		case 2: // G2 C/A
+			return 3
+		case 3: // G2 P
+			return 4
+		case 4: // G3 I
+			return 5
+		case 5: // G3 Q
+			return 6
+		default:
+			return 0
+		}
+	case 2: // Galileo
+		switch signalID {
+		case 0: // E1 C
+			return 1
+		case 1: // E1 A
+			return 2
+		case 2: // E1 B
+			return 3
+		case 3: // E1 B+C
+			return 4
+		case 4: // E1 A+B+C
+			return 5
+		case 5: // E5a I
+			return 6
+		case 6: // E5a Q
+			return 7
+		case 7: // E5a I+Q
+			return 8
+		case 8: // E5b I
+			return 9
+		case 9: // E5b Q
+			return 10
+		case 10: // E5b I+Q
+			return 11
+		case 11: // E5 I
+			return 12
+		case 12: // E5 Q
+			return 13
+		case 13: // E5 I+Q
+			return 14
+		case 14: // E6 C
+			return 15
+		case 15: // E6 A
+			return 16
+		case 16: // E6 B
+			return 17
+		case 17: // E6 B+C
+			return 18
+		case 18: // E6 A+B+C
+			return 19
+		default:
+			return 0
+		}
+	case 3: // SBAS
+		switch signalID {
+		case 0: // L1 C/A
+			return 1
+		case 1: // L5 I
+			return 2
+		case 2: // L5 Q
+			return 3
+		case 3: // L5 I+Q
+			return 4
+		default:
+			return 0
+		}
+	case 4: // QZSS
+		switch signalID {
+		case 0: // L1 C/A
+			return 1
+		case 1: // L1 SAIF
+			return 2
+		case 2: // L1C (1) - pilot component
+			return 3
+		case 3: // L1C (2) - data component
+			return 4
+		case 4: // L2 CM
+			return 5
+		case 5: // L2 CL
+			return 6
+		case 6: // L5 I
+			return 7
+		case 7: // L5 Q
+			return 8
+		case 8: // L5 I+Q
+			return 9
+		case 9: // L6 D
+			return 10
+		case 10: // L6 E
+			return 11
+		case 11: // L6 D+E
+			return 12
+		default:
+			return 0
+		}
+	case 5: // BeiDou
+		switch signalID {
+		case 0: // B1I
+			return 1
+		case 1: // B1Q
+			return 2
+		case 2: // B1I+Q
+			return 3
+		case 3: // B3I
+			return 4
+		case 4: // B3Q
+			return 5
+		case 5: // B3I+Q
+			return 6
+		case 6: // B2I
+			return 7
+		case 7: // B2Q
+			return 8
+		case 8: // B2I+Q
+			return 9
+		case 9: // B1C (1) - pilot component
+			return 10
+		case 10: // B1C (2) - data component
+			return 11
+		case 11: // B5 I
+			return 12
+		case 12: // B5 Q
+			return 13
+		case 13: // B5 I+Q
+			return 14
+		case 14: // B2a I
+			return 15
+		case 15: // B2a Q
+			return 16
+		case 16: // B2a I+Q
+			return 17
+		case 17: // B2b I
+			return 18
+		case 18: // B2b Q
+			return 19
+		case 19: // B2b I+Q
+			return 20
+		default:
+			return 0
+		}
+	case 6: // IRNSS
+		switch signalID {
+		case 0: // L5 SPS
+			return 1
+		case 1: // S SPS
+			return 2
+		case 2: // L5 RS
+			return 3
+		case 3: // S RS
+			return 4
+		case 4: // L5 + S SPS
+			return 5
+		default:
+			return 0
+		}
+	default:
+		return 0
+	}
 }

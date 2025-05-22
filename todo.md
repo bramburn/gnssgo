@@ -106,9 +106,16 @@ This document outlines the remaining tasks to complete the project restructuring
 - [x] Implement MSM7 parsing
 - [x] Add proper error handling and validation
 - [x] Add comprehensive logging for debugging
+- [x] Implement Galileo and BeiDou ephemeris decoders (1042, 1046)
+- [x] Complete implementation of MSM message decoders
+- [x] Add support for antenna and receiver information messages (1007, 1008, 1033)
+- [x] Implement signal code mapping for all GNSS constellations
 - [ ] Complete implementation of SSR message decoders
 - [ ] Add more comprehensive tests with real RTCM data
 - [ ] Optimize performance for high-throughput applications
+  - [ ] Implement buffer pools to reduce memory allocations
+  - [ ] Add message caching for ephemeris and other slowly changing messages
+  - [ ] Implement concurrent message processing with worker pools
 
 ## RTK Positioning
 

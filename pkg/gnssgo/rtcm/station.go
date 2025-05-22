@@ -2,7 +2,6 @@ package rtcm
 
 import (
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/bramburn/gnssgo/pkg/gnssgo"
@@ -43,13 +42,13 @@ type AntennaDescriptorSerial struct {
 
 // ReceiverInfo represents the receiver and antenna descriptor from RTCM message 1033
 type ReceiverInfo struct {
-	StationID       uint16 // Reference station ID
-	ReceiverType    string // Receiver type descriptor
+	StationID        uint16 // Reference station ID
+	ReceiverType     string // Receiver type descriptor
 	ReceiverFirmware string // Receiver firmware version
-	ReceiverSerial  string // Receiver serial number
-	AntennaType     string // Antenna type descriptor
-	AntennaSerial   string // Antenna serial number
-	AntennaSetupID  uint8  // Antenna setup ID
+	ReceiverSerial   string // Receiver serial number
+	AntennaType      string // Antenna type descriptor
+	AntennaSerial    string // Antenna serial number
+	AntennaSetupID   uint8  // Antenna setup ID
 }
 
 // decodeStationCoordinates decodes RTCM message 1005 (Station Coordinates)
