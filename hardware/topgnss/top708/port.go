@@ -25,6 +25,9 @@ type SerialPort interface {
 	// SetReadTimeout sets the read timeout for the port
 	SetReadTimeout(timeout time.Duration) error
 
+	// GetTimeout returns the current read timeout for the port
+	GetTimeout() time.Duration
+
 	// ListPorts lists all available serial ports
 	ListPorts() ([]string, error)
 
@@ -130,6 +133,11 @@ func (p *GNSSSerialPort) SetReadTimeout(timeout time.Duration) error {
 	}
 	p.config.Timeout = timeout
 	return p.port.SetReadTimeout(timeout)
+}
+
+// GetTimeout returns the current read timeout for the port
+func (p *GNSSSerialPort) GetTimeout() time.Duration {
+	return p.config.Timeout
 }
 
 // ListPorts lists all available serial ports

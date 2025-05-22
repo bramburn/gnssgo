@@ -16,6 +16,7 @@ type MockSerialPort struct {
 	connected bool
 	data      []byte
 	written   []byte
+	timeout   time.Duration
 }
 
 func (p *MockSerialPort) Open(portName string, baudRate int) error {
@@ -61,7 +62,16 @@ func (p *MockSerialPort) Write(data []byte) (int, error) {
 
 func (p *MockSerialPort) SetReadTimeout(timeout time.Duration) error {
 	args := p.Called(timeout)
+	p.timeout = timeout
 	return args.Error(0)
+}
+
+func (p *MockSerialPort) GetTimeout() time.Duration {
+	args := p.Called()
+	if len(args) > 0 {
+		return args.Get(0).(time.Duration)
+	}
+	return p.timeout
 }
 
 func (p *MockSerialPort) ListPorts() ([]string, error) {
@@ -347,4 +357,186 @@ func TestTOP708DeviceWriteCommandNotConnected(t *testing.T) {
 	// Verify the result
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "device not connected")
+}
+
+// TestTOP708DeviceWriteCommandWithResponse tests the WriteCommandWithResponse method
+func TestTOP708DeviceWriteCommandWithResponse(t *testing.T) {
+	// Create a mock serial port
+	serialPort := new(MockSerialPort)
+	serialPort.connected = true
+
+	// Setup the mock to store the written data and return the length
+	serialPort.On("Write", mock.Anything).Run(func(args mock.Arguments) {
+		data := args.Get(0).([]byte)
+		serialPort.written = append(serialPort.written, data...)
+	}).Return(14, nil)
+
+	// Setup the mock to return a response
+	serialPort.data = []byte("$PMTK001,314,3*36\r\n")
+	serialPort.On("Read", mock.Anything).Run(func(args mock.Arguments) {
+		buffer := args.Get(0).([]byte)
+		copy(buffer, serialPort.data)
+	}).Return(len(serialPort.data), nil)
+
+	// Setup the mock for timeout
+	serialPort.On("SetReadTimeout", mock.Anything).Return(nil)
+	serialPort.On("GetTimeout").Return(500 * time.Millisecond)
+
+	// Create a new TOP708 device
+	device := NewTOP708Device(serialPort)
+	device.connected = true
+
+	// Write a command to the device and get the response
+	response, err := device.WriteCommandWithResponse("$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28", 1*time.Second)
+
+	// Verify the result
+	assert.NoError(t, err)
+	assert.Equal(t, "$PMTK001,314,3*36\r\n", response)
+	serialPort.AssertCalled(t, "Write", []byte("$PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0*28\r\n"))
+}
+
+// TestTOP708DeviceConfigureOutputMessages tests the ConfigureOutputMessages method
+func TestTOP708DeviceConfigureOutputMessages(t *testing.T) {
+	// Create a mock serial port
+	serialPort := new(MockSerialPort)
+	serialPort.connected = true
+
+	// Setup the mock to store the written data and return the length
+	serialPort.On("Write", mock.Anything).Run(func(args mock.Arguments) {
+		data := args.Get(0).([]byte)
+		serialPort.written = append(serialPort.written, data...)
+	}).Return(50, nil)
+
+	// Setup the mock to return a response
+	serialPort.data = []byte("$PMTK001,314,3*36\r\n")
+	serialPort.On("Read", mock.Anything).Run(func(args mock.Arguments) {
+		buffer := args.Get(0).([]byte)
+		copy(buffer, serialPort.data)
+	}).Return(len(serialPort.data), nil)
+
+	// Setup the mock for timeout
+	serialPort.On("SetReadTimeout", mock.Anything).Return(nil)
+	serialPort.On("GetTimeout").Return(500 * time.Millisecond)
+
+	// Create a new TOP708 device
+	device := NewTOP708Device(serialPort)
+	device.connected = true
+
+	// Configure output messages
+	messages := map[string]bool{
+		"GGA": true,
+		"RMC": true,
+		"GSA": false,
+		"GSV": false,
+	}
+	err := device.ConfigureOutputMessages(messages)
+
+	// Verify the result
+	assert.NoError(t, err)
+	serialPort.AssertCalled(t, "Write", mock.Anything)
+}
+
+// TestTOP708DeviceConfigureUpdateRate tests the ConfigureUpdateRate method
+func TestTOP708DeviceConfigureUpdateRate(t *testing.T) {
+	// Create a mock serial port
+	serialPort := new(MockSerialPort)
+	serialPort.connected = true
+
+	// Setup the mock to store the written data and return the length
+	serialPort.On("Write", mock.Anything).Run(func(args mock.Arguments) {
+		data := args.Get(0).([]byte)
+		serialPort.written = append(serialPort.written, data...)
+	}).Return(20, nil)
+
+	// Setup the mock to return a response
+	serialPort.data = []byte("$PMTK001,220,3*30\r\n")
+	serialPort.On("Read", mock.Anything).Run(func(args mock.Arguments) {
+		buffer := args.Get(0).([]byte)
+		copy(buffer, serialPort.data)
+	}).Return(len(serialPort.data), nil)
+
+	// Setup the mock for timeout
+	serialPort.On("SetReadTimeout", mock.Anything).Return(nil)
+	serialPort.On("GetTimeout").Return(500 * time.Millisecond)
+
+	// Create a new TOP708 device
+	device := NewTOP708Device(serialPort)
+	device.connected = true
+
+	// Configure update rate
+	err := device.ConfigureUpdateRate(1000)
+
+	// Verify the result
+	assert.NoError(t, err)
+	serialPort.AssertCalled(t, "Write", mock.Anything)
+}
+
+// TestTOP708DeviceConfigurePositioningMode tests the ConfigurePositioningMode method
+func TestTOP708DeviceConfigurePositioningMode(t *testing.T) {
+	// Create a mock serial port
+	serialPort := new(MockSerialPort)
+	serialPort.connected = true
+
+	// Setup the mock to store the written data and return the length
+	serialPort.On("Write", mock.Anything).Run(func(args mock.Arguments) {
+		data := args.Get(0).([]byte)
+		serialPort.written = append(serialPort.written, data...)
+	}).Return(15, nil)
+
+	// Setup the mock to return a response
+	serialPort.data = []byte("$PMTK001,886,3*32\r\n")
+	serialPort.On("Read", mock.Anything).Run(func(args mock.Arguments) {
+		buffer := args.Get(0).([]byte)
+		copy(buffer, serialPort.data)
+	}).Return(len(serialPort.data), nil)
+
+	// Setup the mock for timeout
+	serialPort.On("SetReadTimeout", mock.Anything).Return(nil)
+	serialPort.On("GetTimeout").Return(500 * time.Millisecond)
+
+	// Create a new TOP708 device
+	device := NewTOP708Device(serialPort)
+	device.connected = true
+
+	// Configure positioning mode
+	err := device.ConfigurePositioningMode(PositioningModeVehicle)
+
+	// Verify the result
+	assert.NoError(t, err)
+	serialPort.AssertCalled(t, "Write", mock.Anything)
+}
+
+// TestTOP708DeviceConfigureSatelliteSystems tests the ConfigureSatelliteSystems method
+func TestTOP708DeviceConfigureSatelliteSystems(t *testing.T) {
+	// Create a mock serial port
+	serialPort := new(MockSerialPort)
+	serialPort.connected = true
+
+	// Setup the mock to store the written data and return the length
+	serialPort.On("Write", mock.Anything).Run(func(args mock.Arguments) {
+		data := args.Get(0).([]byte)
+		serialPort.written = append(serialPort.written, data...)
+	}).Return(20, nil)
+
+	// Setup the mock to return a response
+	serialPort.data = []byte("$PMTK001,353,3*37\r\n")
+	serialPort.On("Read", mock.Anything).Run(func(args mock.Arguments) {
+		buffer := args.Get(0).([]byte)
+		copy(buffer, serialPort.data)
+	}).Return(len(serialPort.data), nil)
+
+	// Setup the mock for timeout
+	serialPort.On("SetReadTimeout", mock.Anything).Return(nil)
+	serialPort.On("GetTimeout").Return(500 * time.Millisecond)
+
+	// Create a new TOP708 device
+	device := NewTOP708Device(serialPort)
+	device.connected = true
+
+	// Configure satellite systems
+	err := device.ConfigureSatelliteSystems(SatelliteSystemGPS | SatelliteSystemGLONASS)
+
+	// Verify the result
+	assert.NoError(t, err)
+	serialPort.AssertCalled(t, "Write", mock.Anything)
 }

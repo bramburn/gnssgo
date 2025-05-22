@@ -37,3 +37,4 @@ log_*
 *.sp3.Z
 *.clk
 *.clk.Z
+repomix-output.xml
